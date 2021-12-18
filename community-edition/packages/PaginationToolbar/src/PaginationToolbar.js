@@ -249,7 +249,6 @@ export default class InovuaPaginationToolbar extends React.Component {
     const limit = this.getLimit();
 
     const comboProps = {
-      shadow: false,
       style: { minWidth: 70, width: 70 },
       className: `${CLASS_NAME}__page-size-combo`,
       borderRadius: 0,

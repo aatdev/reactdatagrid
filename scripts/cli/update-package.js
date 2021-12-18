@@ -15,7 +15,7 @@ const argv = require('yargs')
     type: 'string',
   }).argv;
 
-const prepare = require('../preparepackageJSON');
+const prepare = require('../preparePackageJSON');
 
 const theModule = argv.module;
 const edition = argv.edition;

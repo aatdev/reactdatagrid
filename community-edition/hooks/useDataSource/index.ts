@@ -302,6 +302,7 @@ const usePagination = (
   {
     append,
     reload,
+    onRefresh,
     setAppend,
     skip,
     limit,
@@ -463,7 +464,7 @@ const usePagination = (
       onSkipChange: setSkip,
       onLimitChange: setLimit,
       reload,
-      onRefresh: reload,
+      onRefresh: onRefresh || reload,
       totalCount: paginationCount,
       count,
       skip,
@@ -1113,10 +1114,9 @@ export default (
       skip: computedSkip,
       limit: computedLimit,
       count,
-
+      onRefresh: props.onRefresh,
       setSkip,
       setLimit,
-
       pagination: computedPagination,
       livePagination: computedLivePagination,
       localPagination: computedLocalPagination,

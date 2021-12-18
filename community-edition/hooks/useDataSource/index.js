@@ -122,7 +122,7 @@ const hasPrevPage = ({ skip, limit, count, }) => {
     const currentPage = getCurrentPage({ skip, limit });
     return currentPage > 1 && currentPage - 1 < getPageCount({ count, limit });
 };
-const usePagination = ({ append, reload, setAppend, skip, limit, count, setSkip: silentSetSkip, setLimit: silentSetLimit, remotePagination, localPagination, pagination, lastSkipRef, lastLimitRef, dataCountAfterFilter, livePagination, originalData, data, }, computedPropsRef) => {
+const usePagination = ({ append, reload, onRefresh, setAppend, skip, limit, count, setSkip: silentSetSkip, setLimit: silentSetLimit, remotePagination, localPagination, pagination, lastSkipRef, lastLimitRef, dataCountAfterFilter, livePagination, originalData, data, }, computedPropsRef) => {
     const paginationCount = getDataCountForPagination({
         originalData,
         remotePagination,
@@ -201,7 +201,7 @@ const usePagination = ({ append, reload, setAppend, skip, limit, count, setSkip:
             onSkipChange: setSkip,
             onLimitChange: setLimit,
             reload,
-            onRefresh: reload,
+            onRefresh: onRefresh || reload,
             totalCount: paginationCount,
             count,
             skip,
@@ -626,6 +626,7 @@ export default (props, computedProps, computedPropsRef) => {
         skip: computedSkip,
         limit: computedLimit,
         count,
+        onRefresh: props.onRefresh,
         setSkip,
         setLimit,
         pagination: computedPagination,

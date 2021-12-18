@@ -15,6 +15,7 @@ module.exports = (modulePath, { edition }) => {
   const rootPackageJSON = require(rootPackagePath);
 
   const moduleFolder = resolve(__dirname, '../lib', modulePath);
+  console.log('AAA', resolve(moduleFolder, './package.json'));
   const moduleJSON = require(resolve(moduleFolder, './package.json'));
 
   const packageName = rootPackageJSON.name;
