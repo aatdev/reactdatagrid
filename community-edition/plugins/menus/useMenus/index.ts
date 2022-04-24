@@ -21,9 +21,12 @@ import {
 } from '../../../src/types';
 
 import Region from '../../../packages/region';
+import { getGlobal } from '../../../getGlobal';
 
 export { default as renderColumnContextMenu } from './renderColumnContextMenu';
 export { default as renderRowContextMenu } from './renderRowContextMenu';
+
+const globalObject = getGlobal();
 
 export default (
   props: {},
@@ -73,6 +76,7 @@ export default (
     );
   }, []);
 
+  const columnContextMenuIndex = useRef<number>(-1);
   const preventIEMenuCloseRef = useRef<boolean>(false);
 
   const columnContextMenuInfoRef = useRef<{
@@ -155,10 +159,13 @@ export default (
       if (!computedProps) {
         return;
       }
+
       if (computedProps.columnContextMenuProps) {
         computedProps.hideColumnContextMenu();
         return;
       }
+
+      columnContextMenuIndex.current = cellProps.columnIndex;
 
       columnContextMenuInfoRef.current = {
         menuAlignTo: alignTo,
@@ -228,8 +235,8 @@ export default (
       const alignTo = Region.from(event);
 
       alignTo.shift({
-        top: -(global as any).scrollY,
-        left: -(global as any).scrollX,
+        top: -(globalObject as any).scrollY,
+        left: -(globalObject as any).scrollX,
       });
 
       showRowContextMenu(alignTo, rowProps, cellProps, () => {});
@@ -285,5 +292,6 @@ export default (
     setColumnContextMenuInstanceProps,
     setRowContextMenuProps,
     preventIEMenuCloseRef,
+    columnContextMenuIndex,
   };
 };

@@ -7,9 +7,10 @@
 
 import { MutableRefObject, useRef } from 'react';
 import { TypeDataGridProps, TypeComputedProps } from '../../../types';
+import renderClipboardContextMenu from './renderClipboardContextMenu';
 
 const useClipboard = (
-  props: TypeDataGridProps,
+  _props: TypeDataGridProps,
   computedProps: TypeComputedProps,
   computedPropsRef: MutableRefObject<TypeComputedProps | null>
 ): {
@@ -19,18 +20,22 @@ const useClipboard = (
   pasteSelectedCellsFromClipboard: () => void;
   clipboard: MutableRefObject<boolean>;
   preventBlurOnContextMenuOpen: MutableRefObject<boolean>;
-} => {
+} | null => {
   const clipboard: MutableRefObject<boolean> = useRef(false);
   const preventBlurOnContextMenuOpen: MutableRefObject<boolean> = useRef(false);
+
+  if (!computedProps.enableClipboard) {
+    return null;
+  }
 
   const copyActiveRowToClipboard = () => {
     const { current: computedProps } = computedPropsRef;
     if (!computedProps) {
-      return;
+      return null;
     }
 
     if (computedProps.computedCellSelection) {
-      return;
+      return null;
     }
 
     const activeRow = computedProps.getActiveItem();
@@ -39,14 +44,33 @@ const useClipboard = (
       computedProps.onCopyActiveRowChange(activeRow);
     }
 
+    const idProperty = computedProps.idProperty;
+    const compoundIdProperty = idProperty.includes(
+      computedProps.idPropertySeparator
+    );
+
     if (activeRow && navigator.clipboard) {
-      delete activeRow[computedProps.idProperty];
-      const parsedActiveRow = JSON.stringify(activeRow);
+      const clonedActiveRow = Object.assign({}, activeRow);
+      if (compoundIdProperty) {
+        const activeRowId = computedProps.getItemId(clonedActiveRow);
+        const parts = idProperty.split(computedProps.idPropertySeparator);
+        parts.reduce((itemObj: any, id: string) => {
+          if (activeRowId === itemObj[id]) {
+            if (itemObj) {
+              delete itemObj[id];
+            }
+          }
+          return itemObj[id];
+        }, clonedActiveRow);
+      } else {
+        delete clonedActiveRow[idProperty];
+      }
+      const parsedActiveRow = JSON.stringify(clonedActiveRow);
 
       navigator.clipboard
         .writeText(parsedActiveRow)
         .then(() => {
-          if (Object.keys(activeRow).length > 0) {
+          if (Object.keys(clonedActiveRow).length > 0) {
             clipboard.current = true;
           }
         })
@@ -57,11 +81,11 @@ const useClipboard = (
   const pasteActiveRowFromClipboard = () => {
     const { current: computedProps } = computedPropsRef;
     if (!computedProps) {
-      return;
+      return null;
     }
 
     if (computedProps.computedCellSelection) {
-      return;
+      return null;
     }
 
     if (navigator.clipboard) {
@@ -76,6 +100,7 @@ const useClipboard = (
         if (activeIndex != null) {
           computedProps.setItemAt(activeIndex, parsedData, {
             replace: false,
+            deepCloning: true,
           });
         }
       });
@@ -85,11 +110,11 @@ const useClipboard = (
   const copySelectedCellsToClipboard = () => {
     const { current: computedProps } = computedPropsRef;
     if (!computedProps) {
-      return;
+      return null;
     }
 
     if (!computedProps.computedCellSelection) {
-      return;
+      return null;
     }
 
     const selectedCells = computedProps.computedCellSelection;
@@ -129,11 +154,11 @@ const useClipboard = (
   const pasteSelectedCellsFromClipboard = () => {
     const { current: computedProps } = computedPropsRef;
     if (!computedProps) {
-      return;
+      return null;
     }
 
     if (!computedProps.computedCellSelection) {
-      return;
+      return null;
     }
 
     if (navigator.clipboard) {
@@ -174,6 +199,20 @@ const useClipboard = (
       });
     }
   };
+
+  const clipboardContextMenu = () => {
+    const { current: computedProps } = computedPropsRef;
+    if (!computedProps) {
+      return null;
+    }
+
+    if (computedProps.renderRowContextMenu) {
+      return;
+    }
+
+    computedProps.initialProps.renderRowContextMenu = renderClipboardContextMenu;
+  };
+  clipboardContextMenu();
 
   return {
     copyActiveRowToClipboard,

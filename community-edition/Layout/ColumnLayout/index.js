@@ -15,6 +15,8 @@ import HeaderLayout from './HeaderLayout';
 import Content from './Content';
 import { Consumer } from '../../context';
 import isMobile from '../../packages/isMobile';
+import { getGlobal } from '../../getGlobal';
+const globalObject = getGlobal();
 const height100 = { height: '100%' };
 export default class InovuaDataGridColumnLayout extends React.Component {
     scrollTop = 0;
@@ -128,10 +130,10 @@ export default class InovuaDataGridColumnLayout extends React.Component {
     updateLockedRows(scrollTop) {
         return;
     }
-    onContainerScrollHorizontal = (computedProps, scrollLeft) => {
+    onContainerScrollHorizontal = (computedProps, scrollLeft, scrollLeftMax) => {
         this.scrollLeft = scrollLeft;
         if (this.headerLayout) {
-            this.headerLayout.onContainerScrollHorizontal(scrollLeft);
+            this.headerLayout.onContainerScrollHorizontal(scrollLeft, scrollLeftMax);
         }
         if (computedProps.onScroll) {
             computedProps.onScroll();
@@ -241,8 +243,8 @@ export default class InovuaDataGridColumnLayout extends React.Component {
         // allow resizing the width to the right without limiting to the grid viewport
         constrainTo.set({
             [this.props.rtl ? 'left' : 'right']: (this.props.rtl ? -1 : 1) *
-                (global.screen
-                    ? global.screen.width * 3
+                (globalObject.screen
+                    ? globalObject.screen.width * 3
                     : Region.from(document.documentElement).getRight() * 2),
         });
         const column = columns[index];

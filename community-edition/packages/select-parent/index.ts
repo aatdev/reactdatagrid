@@ -7,11 +7,13 @@
 
 'use strict';
 
-var curry = require('./curry');
-var matches;
+import curry from './curry';
+import nativeMatches from '../matches';
 
-module.exports = curry(function(selector, node) {
-  matches = matches || require('../matches');
+var matches: any;
+
+export default curry(function(selector: string, node: any) {
+  matches = matches || nativeMatches;
 
   while ((node = node.parentElement)) {
     if (matches.call(node, selector)) {

@@ -10,6 +10,10 @@ import React, { useState } from 'react';
 import DataGrid from '@inovua/reactdatagrid-enterprise';
 
 import people from '../people';
+import { getGlobal } from '@inovua/reactdatagrid-community/getGlobal';
+import CheckBox from '@inovua/reactdatagrid-community/packages/CheckBox';
+
+const globalObject = getGlobal();
 
 const gridStyle = { minHeight: 350 };
 
@@ -17,34 +21,51 @@ const columns = [
   { name: 'id', type: 'number', defaultWidth: 80 },
   { name: 'firstName', flex: 1 },
   { name: 'country', flex: 1 },
-  { name: 'age', type: 'number', flex: 1, defaultLocked: 'end' },
+  { name: 'age', type: 'number', flex: 1 },
 ];
 
 const dataSource = people;
 
-(global as any).cellSelection = [];
+(globalObject as any).cellSelection = [];
 const onCellSelectionChange = (activeCell: [number, number] | null) => {
-  (global as any).cellSelection.push(activeCell);
+  (globalObject as any).cellSelection.push(activeCell);
 };
 
 const App = () => {
   const [enableKeyboardNavigation, setEnableKeyboardNavigation] = useState<
     boolean
   >(true);
-
-  global.setEnableKeyboardNavigation = setEnableKeyboardNavigation;
+  const [enableColumnHover, setEnableColumnHover] = useState<boolean>(false);
 
   return (
-    <DataGrid
-      columns={columns}
-      idProperty="id"
-      style={gridStyle}
-      licenseKey={process.env.NEXT_PUBLIC_LICENSE_KEY}
-      dataSource={dataSource}
-      defaultCellSelection={{ '4,firstName': true, '5,firstName': true }}
-      enableKeyboardNavigation={enableKeyboardNavigation}
-      onCellSelectionChange={onCellSelectionChange}
-    />
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <CheckBox checked={enableColumnHover} onChange={setEnableColumnHover}>
+          Column hover
+        </CheckBox>
+      </div>
+      <div style={{ marginBottom: 20 }}>
+        <CheckBox
+          checked={enableKeyboardNavigation}
+          onChange={setEnableKeyboardNavigation}
+        >
+          Keyboard navigation
+        </CheckBox>
+      </div>
+
+      <DataGrid
+        columns={columns}
+        idProperty="id"
+        style={gridStyle}
+        licenseKey={process.env.NEXT_PUBLIC_LICENSE_KEY}
+        dataSource={dataSource}
+        defaultCellSelection={{ '4,firstName': true, '5,firstName': true }}
+        enableKeyboardNavigation={enableKeyboardNavigation}
+        onCellSelectionChange={onCellSelectionChange}
+        enableColumnHover={enableColumnHover}
+        multiSelect
+      />
+    </div>
   );
 };
 export default () => <App />;

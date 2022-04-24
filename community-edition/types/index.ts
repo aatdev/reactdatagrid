@@ -11,7 +11,12 @@ import TypeDataGridProps, {
   TypeBuildColumnsProps,
 } from './TypeDataGridProps';
 
-import { TypeComputedColumn, TypeColumn, TypeColumns } from './TypeColumn';
+import {
+  TypeComputedColumn,
+  TypeColumn,
+  TypeColumns,
+  TypeHeaderProps,
+} from './TypeColumn';
 import { MutableRefObject, ReactNode, CSSProperties } from 'react';
 export { TypeSortInfo, TypeSingleSortInfo } from './TypeSortInfo';
 export { TypeGroupBy } from './TypeGroupBy';
@@ -44,7 +49,11 @@ export {
   TypeComputedColumnsMap,
   TypeColumnWithId,
   IColumn,
+  TypeSummaryReducer,
+  TypeHeaderProps,
 } from './TypeColumn';
+export { RowProps } from '../Layout/ColumnLayout/Content/RowProps';
+export { CellProps } from '../Layout/ColumnLayout/Cell/CellProps';
 
 export { TypeRowReorderFn };
 
@@ -58,6 +67,7 @@ export type TypeGroup = {
   name: string;
   header?: ReactNode;
   headerAlign: 'start' | 'end' | 'center' | 'left' | 'right';
+  headerProps?: TypeHeaderProps;
 };
 export type TypePivotItem =
   | {
@@ -168,6 +178,8 @@ export type TypeCellProps = {
           contextMenu: any;
         }
       ) => ReactNode);
+  groupProps?: any;
+  cellSelectable?: boolean;
 };
 export type TypeShowCellBorders = true | false | 'vertical' | 'horizontal';
 
@@ -426,11 +438,6 @@ export type TypeShowGroupSummaryRow =
   | 'end'
   | boolean
   | ((group: TypeGroupDataItem) => 'start' | 'end' | boolean);
-export interface TypeSummaryReducer<T> {
-  initialValue: T;
-  reducer: (acc: T, currentValue: T, index: number, arr: any[]) => T;
-  complete?: (acc: T, arr: any[]) => T;
-}
 
 export type TypeCollapsedGroups = true | { [key: string]: boolean };
 export type TypeExpandedGroups = TypeCollapsedGroups;
@@ -496,12 +503,14 @@ export type TypeConfig = {
 };
 
 export type RangeResultType = {
-  group?: boolean;
-  height: number;
   top: number;
   bottom: number;
+  height: number;
   index: number;
-  keyPath?: string[];
+  group?: boolean;
+  keyPath?: string[] | string;
   leaf?: boolean;
+  value?: string;
   depth?: number;
+  parent?: boolean;
 };

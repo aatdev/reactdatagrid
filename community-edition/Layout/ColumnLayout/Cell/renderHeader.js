@@ -96,8 +96,8 @@ const renderHeader = (props, domProps, cellInstance, state = EMPTY_OBJECT) => {
             styleCloned = true;
         }
         let resizeHandle;
-        if (!dragging && virtualizeColumns) {
-            theStyle.left = props.left;
+        if (!dragging && !computedLocked && virtualizeColumns) {
+            theStyle.left = props.computedOffset;
             theStyle.position = 'absolute';
         }
         if (props.computedResizable) {
@@ -105,6 +105,7 @@ const renderHeader = (props, domProps, cellInstance, state = EMPTY_OBJECT) => {
                     width: props.columnResizeHandleWidth,
                     [props.rtl ? 'left' : 'right']: right,
                     zIndex: (depth || 0) * 10000 + (100 - props.computedVisibleIndex || 0),
+                    height: props.headerHeight,
                 }, resizeHandleStyle: resizeHandleStyle, resizeHandleClassName: "InovuaReactDataGrid__column-resize-handle" }));
         }
         else {

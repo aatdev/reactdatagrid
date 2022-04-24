@@ -38,13 +38,14 @@ type TypeActiveRowIndicatorProps = {
   activeRowHeight: number;
   dataSourceCount: number;
   activeRowRef: MutableRefObject<{ instance: any; node: HTMLElement } | null>;
+  activeRowIndicatorClassName?: string;
 };
 
 const ActiveRowIndicator = (props: TypeActiveRowIndicatorProps) => {
   const [offset, setOffset] = useState<string>('');
   const [_scrollLeft, setScrollLeft] = useState<number>(0);
 
-  const { activeIndex, rtl, rtlOffset } = props;
+  const { activeIndex, rtl, rtlOffset, activeRowIndicatorClassName } = props;
   const oldActiveIndex = usePrevious<number>(activeIndex, -1);
 
   const { instance: row = {} } = props.activeRowRef.current || {};
@@ -72,7 +73,11 @@ const ActiveRowIndicator = (props: TypeActiveRowIndicatorProps) => {
       return setOffset('');
     }
 
-    if (instance && instance.props.rowIndex !== props.activeIndex) {
+    if (
+      instance &&
+      instance.props.rowIndex !== props.activeIndex &&
+      props.activeIndex >= 0
+    ) {
       // try again later,
       // since the row has not been updated yet
       requestAnimationFrame(() => updateLayout({ raf: false }));
@@ -140,6 +145,12 @@ const ActiveRowIndicator = (props: TypeActiveRowIndicatorProps) => {
   if (transform) {
     style.transform = transform;
   }
+
+  const innerClassName = join(
+    `${CLASS_NAME}-active-borders-inner`,
+    activeRowIndicatorClassName ? activeRowIndicatorClassName : ''
+  );
+
   return (
     <div
       key="active-row-borders"
@@ -151,7 +162,7 @@ const ActiveRowIndicator = (props: TypeActiveRowIndicatorProps) => {
       )}
       style={style}
     >
-      <div className={`${CLASS_NAME}-active-borders-inner`} />
+      <div className={innerClassName} />
     </div>
   );
 };

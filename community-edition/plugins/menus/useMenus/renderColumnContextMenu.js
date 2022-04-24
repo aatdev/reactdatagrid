@@ -92,20 +92,22 @@ export default (computedProps, computedPropsRef) => {
             }
         });
         if (computedProps.updateMenuPositionOnColumnsChange) {
-            const menuTools = Array.prototype.slice.call(computedProps.domRef.current.querySelectorAll('.InovuaReactDataGrid__column-header__menu-tool'));
-            const mainMenu = computedProps.domRef.current.querySelector('.InovuaReactDataGrid > .inovua-react-toolkit-menu');
-            const cellInstance = computedProps.columnContextMenuInstanceProps;
-            const columnIndex = cellInstance.props.computedVisibleIndex;
-            const alignTo = getAlignTo(selection, menuTools, columnIndex);
-            if (alignTo) {
-                computedProps.updateMainMenuPosition(alignTo);
-                if (mainMenu) {
-                    mainMenu.style.transition = 'transform 200ms';
-                    setTimeout(() => {
-                        mainMenu.style.transition = '';
-                    }, 200);
+            requestAnimationFrame(() => {
+                const menuTools = Array.prototype.slice.call(computedProps.domRef.current.querySelectorAll('.InovuaReactDataGrid__column-header__menu-tool'));
+                const mainMenu = computedProps.domRef.current.querySelector('.InovuaReactDataGrid > .inovua-react-toolkit-menu');
+                const cellInstance = computedProps.columnContextMenuInstanceProps;
+                const columnIndex = cellInstance.props.computedVisibleIndex;
+                const alignTo = getAlignTo(selection, menuTools, columnIndex);
+                if (alignTo) {
+                    computedProps.updateMainMenuPosition(alignTo);
+                    if (mainMenu) {
+                        mainMenu.style.transition = 'transform 200ms';
+                        setTimeout(() => {
+                            mainMenu.style.transition = '';
+                        }, 200);
+                    }
                 }
-            }
+            });
         }
     };
     const currentColumn = computedProps.getColumnBy(cellProps.id);
@@ -129,6 +131,9 @@ export default (computedProps, computedPropsRef) => {
     const showColumnMenuSortOptions = cellProps.showColumnMenuSortOptions !== undefined
         ? cellProps.showColumnMenuSortOptions
         : computedProps.initialProps.showColumnMenuSortOptions;
+    const enableColumnAutosize = computedProps.enableColumnAutosize
+        ? computedProps.enableColumnAutosize
+        : computedProps.initialProps.enableColumnAutosize;
     let columnsItem = {
         label: computedProps.i18n('columns'),
         itemId: 'columns',
@@ -286,6 +291,65 @@ export default (computedProps, computedPropsRef) => {
                     computedProps.hideColumnContextMenu();
                 },
             },
+        computedProps.enableColumnAutosize ? '-' : null,
+        computedProps.enableColumnAutosize === false
+            ? null
+            : {
+                label: computedProps.i18n('autoSizeToFit'),
+                itemId: 'autoSizeToFit',
+                menuProps: {
+                    dismissOnClick: true,
+                },
+                onClick: () => {
+                    const { current: computedProps } = computedPropsRef;
+                    if (!computedProps) {
+                        return;
+                    }
+                    if (computedProps.setColumnSizesToFit) {
+                        computedProps.setColumnSizesToFit();
+                        computedProps.hideColumnContextMenu();
+                    }
+                },
+            },
+        computedProps.enableColumnAutosize === false
+            ? null
+            : {
+                label: computedProps.i18n('autoresizeThisColumn'),
+                itemId: 'autoresizeThisColumn',
+                menuProps: {
+                    dismissOnClick: true,
+                },
+                onClick: () => {
+                    const { current: computedProps } = computedPropsRef;
+                    if (!computedProps) {
+                        return;
+                    }
+                    const columnId = cellProps.id;
+                    if (computedProps.setColumnSizeAuto) {
+                        computedProps.setColumnSizeAuto(columnId);
+                        computedProps.hideColumnContextMenu();
+                    }
+                },
+            },
+        enableColumnAutosize === false
+            ? null
+            : {
+                label: computedProps.i18n('autoresizeAllColumns'),
+                itemId: 'autoresizeAllColumns',
+                menuProps: {
+                    dismissOnClick: true,
+                },
+                onClick: () => {
+                    const { current: computedProps } = computedPropsRef;
+                    if (!computedProps) {
+                        return;
+                    }
+                    if (computedProps.setColumnsSizesAuto) {
+                        computedProps.setColumnsSizesAuto();
+                        computedProps.hideColumnContextMenu();
+                    }
+                },
+            },
         columnsItem ? '-' : null,
         columnsItem,
     ].filter(notEmpty);
@@ -345,6 +409,7 @@ export default (computedProps, computedPropsRef) => {
     const constrainTo = true;
     const menuProps = {
         updatePositionOnScroll: computedProps.updateMenuPositionOnScroll,
+        stopBlurPropagation: false,
         maxHeight: constrainToComputedProps.initialProps
             .columnContextMenuConstrainTo
             ? null

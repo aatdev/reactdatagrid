@@ -16,7 +16,7 @@ function curry(fn, n) {
             if (len) {
                 args.push.apply(args, arguments);
             }
-            if (args.length < n) {
+            if (n !== undefined && args.length < n) {
                 return getCurryClosure(args);
             }
             return fn.apply(this, args);
@@ -25,4 +25,4 @@ function curry(fn, n) {
     }
     return getCurryClosure([]);
 }
-module.exports = curry;
+export default curry;

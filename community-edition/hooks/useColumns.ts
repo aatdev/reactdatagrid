@@ -248,6 +248,8 @@ export default (
     rowExpandColumn: props.rowExpandColumn,
     onRowReorder: props.onRowReorder,
     rowReorderColumn: props.rowReorderColumn,
+    renderRowDetailsExpandIcon: props.renderRowDetailsExpandIcon,
+    renderRowDetailsCollapsedIcon: props.renderRowDetailsCollapsedIcon,
   });
 
   let virtualizeColumns =
@@ -526,6 +528,7 @@ export default (
     computedColumnOrder: columnOrder,
     setColumnOrder,
     setColumnVisible,
+    computeColumnSizes: setColumnSizes,
 
     computedPivot: props.pivot,
     totalFlexColumnCount,

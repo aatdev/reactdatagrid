@@ -11,6 +11,7 @@ import isMultiSelect from './isMultiSelect';
 import isSelectionControlled from './isSelectionControlled';
 import { notifySelection, handleSelection } from '../useRow/handleSelection';
 import batchUpdate from '../../utils/batchUpdate';
+import usePrevious from '../usePrevious';
 const EMPTY_OBJECT = {};
 const getUnselectedFromProps = (computedProps) => {
     if (!computedProps) {
@@ -127,6 +128,11 @@ const useSelected = (props, computedProps, computedPropsRef) => {
 };
 export default (props, computedProps, computedPropsRef) => {
     const { selected: computedSelected, setSelected, rowMultiSelectionEnabled, rowSelectionEnabled, } = useSelected(props, computedProps, computedPropsRef);
+    const previousRowMultiSelectionEnabled = usePrevious(rowMultiSelectionEnabled, rowMultiSelectionEnabled);
+    if (previousRowMultiSelectionEnabled === true &&
+        rowMultiSelectionEnabled === false) {
+        setSelected({});
+    }
     const computedRowSelectionEnabled = rowSelectionEnabled;
     const computedRowMultiSelectionEnabled = rowMultiSelectionEnabled;
     const { unselected: computedUnselected, setUnselected } = useUnselected(props, {
@@ -289,6 +295,63 @@ export default (props, computedProps, computedPropsRef) => {
         const id = computedProps.getItemId(data);
         computedProps.setSelectedById(id, selected, queue);
     }, []);
+    const treeGridChildrenSelection = (dataArray, id, selected, clone, treeGridChildrenDeselectionEnabled, parentNode) => {
+        const { current: computedProps } = computedPropsRef;
+        if (!computedProps) {
+            return;
+        }
+        const idProperty = computedProps.idProperty;
+        const nodesName = computedProps.nodesProperty;
+        const pathSeparator = computedProps.nodePathSeparator;
+        const expandedNodes = computedProps.computedExpandedNodes || EMPTY_OBJECT;
+        const generateIdFromPath = computedProps.generateIdFromPath;
+        for (let i = 0; i < dataArray.length; i++) {
+            const item = dataArray[i];
+            if (item) {
+                const itemId = item[idProperty];
+                const itemNodes = item[nodesName];
+                const parentNodeId = parentNode
+                    ? `${parentNode[idProperty]}`
+                    : undefined;
+                const path = parentNode
+                    ? `${parentNodeId}${pathSeparator}${itemId}`
+                    : `${itemId}`;
+                if (generateIdFromPath) {
+                    item[idProperty] = path;
+                }
+                const idLength = id.split(pathSeparator)?.length;
+                const idFromPath = path
+                    .split(pathSeparator)
+                    .slice(0, idLength)
+                    .join(pathSeparator);
+                if (idFromPath === id) {
+                    const treeData = computedProps.dataMap
+                        ? computedProps.dataMap[path]
+                        : null;
+                    if (!treeData) {
+                        continue;
+                    }
+                    if (selected) {
+                        clone[path] = treeData;
+                    }
+                    else {
+                        if (treeGridChildrenDeselectionEnabled) {
+                            delete clone[path];
+                        }
+                        else {
+                            delete clone[id];
+                        }
+                    }
+                }
+                if (expandedNodes && expandedNodes[itemId]) {
+                    if (Array.isArray(itemNodes)) {
+                        treeGridChildrenSelection(itemNodes, id, selected, clone, treeGridChildrenDeselectionEnabled, item);
+                    }
+                }
+            }
+        }
+        return clone;
+    };
     const setSelectedById = useCallback((id, selected, queue) => {
         const { current: computedProps } = computedPropsRef;
         if (!computedProps) {
@@ -330,11 +393,20 @@ export default (props, computedProps, computedPropsRef) => {
             }
             else {
                 clone = Object.assign({}, selectedMap);
-                if (selected) {
-                    clone[id] = data;
+                if (computedProps.computedTreeEnabled &&
+                    computedProps.treeGridChildrenSelectionEnabled) {
+                    const originalData = JSON.stringify(computedProps.originalData || []);
+                    const cloneOriginalData = [...JSON.parse(originalData)];
+                    const treeGridChildrenDeselectionEnabled = computedProps.treeGridChildrenDeselectionEnabled;
+                    treeGridChildrenSelection(cloneOriginalData, id, selected, clone, treeGridChildrenDeselectionEnabled);
                 }
                 else {
-                    delete clone[id];
+                    if (selected) {
+                        clone[id] = data;
+                    }
+                    else {
+                        delete clone[id];
+                    }
                 }
             }
             notifySelection(computedProps, clone, data, unselectedMap, queue);

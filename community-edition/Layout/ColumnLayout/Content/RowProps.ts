@@ -230,6 +230,14 @@ export type RowProps = {
   }) => void;
   expandOnMouseDown?: boolean;
   currentEditCompletePromise?: any;
+  enableColumnAutosize?: boolean;
+  onColumnMouseEnter?: () => void;
+  onColumnMouseLeave?: () => void;
+  columnIndexHovered?: number;
+  columnHoverClassName?: string;
+  computedEnableColumnHover?: boolean;
+  renderRowDetailsExpandIcon?: () => void;
+  renderRowDetailsCollapsedIcon?: () => void;
 };
 
 export type EnhancedRowProps = RowProps & {

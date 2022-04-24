@@ -5,28 +5,49 @@
  * LICENSE file in the root directory of this source tree.
  */
 import { useRef } from 'react';
-const useClipboard = (props, computedProps, computedPropsRef) => {
+import renderClipboardContextMenu from './renderClipboardContextMenu';
+const useClipboard = (_props, computedProps, computedPropsRef) => {
     const clipboard = useRef(false);
     const preventBlurOnContextMenuOpen = useRef(false);
+    if (!computedProps.enableClipboard) {
+        return null;
+    }
     const copyActiveRowToClipboard = () => {
         const { current: computedProps } = computedPropsRef;
         if (!computedProps) {
-            return;
+            return null;
         }
         if (computedProps.computedCellSelection) {
-            return;
+            return null;
         }
         const activeRow = computedProps.getActiveItem();
         if (computedProps.onCopyActiveRowChange) {
             computedProps.onCopyActiveRowChange(activeRow);
         }
+        const idProperty = computedProps.idProperty;
+        const compoundIdProperty = idProperty.includes(computedProps.idPropertySeparator);
         if (activeRow && navigator.clipboard) {
-            delete activeRow[computedProps.idProperty];
-            const parsedActiveRow = JSON.stringify(activeRow);
+            const clonedActiveRow = Object.assign({}, activeRow);
+            if (compoundIdProperty) {
+                const activeRowId = computedProps.getItemId(clonedActiveRow);
+                const parts = idProperty.split(computedProps.idPropertySeparator);
+                parts.reduce((itemObj, id) => {
+                    if (activeRowId === itemObj[id]) {
+                        if (itemObj) {
+                            delete itemObj[id];
+                        }
+                    }
+                    return itemObj[id];
+                }, clonedActiveRow);
+            }
+            else {
+                delete clonedActiveRow[idProperty];
+            }
+            const parsedActiveRow = JSON.stringify(clonedActiveRow);
             navigator.clipboard
                 .writeText(parsedActiveRow)
                 .then(() => {
-                if (Object.keys(activeRow).length > 0) {
+                if (Object.keys(clonedActiveRow).length > 0) {
                     clipboard.current = true;
                 }
             })
@@ -36,10 +57,10 @@ const useClipboard = (props, computedProps, computedPropsRef) => {
     const pasteActiveRowFromClipboard = () => {
         const { current: computedProps } = computedPropsRef;
         if (!computedProps) {
-            return;
+            return null;
         }
         if (computedProps.computedCellSelection) {
-            return;
+            return null;
         }
         if (navigator.clipboard) {
             navigator.clipboard.readText().then(data => {
@@ -51,6 +72,7 @@ const useClipboard = (props, computedProps, computedPropsRef) => {
                 if (activeIndex != null) {
                     computedProps.setItemAt(activeIndex, parsedData, {
                         replace: false,
+                        deepCloning: true,
                     });
                 }
             });
@@ -59,10 +81,10 @@ const useClipboard = (props, computedProps, computedPropsRef) => {
     const copySelectedCellsToClipboard = () => {
         const { current: computedProps } = computedPropsRef;
         if (!computedProps) {
-            return;
+            return null;
         }
         if (!computedProps.computedCellSelection) {
-            return;
+            return null;
         }
         const selectedCells = computedProps.computedCellSelection;
         const rows = {};
@@ -94,10 +116,10 @@ const useClipboard = (props, computedProps, computedPropsRef) => {
     const pasteSelectedCellsFromClipboard = () => {
         const { current: computedProps } = computedPropsRef;
         if (!computedProps) {
-            return;
+            return null;
         }
         if (!computedProps.computedCellSelection) {
-            return;
+            return null;
         }
         if (navigator.clipboard) {
             navigator.clipboard.readText().then(data => {
@@ -122,6 +144,17 @@ const useClipboard = (props, computedProps, computedPropsRef) => {
             });
         }
     };
+    const clipboardContextMenu = () => {
+        const { current: computedProps } = computedPropsRef;
+        if (!computedProps) {
+            return null;
+        }
+        if (computedProps.renderRowContextMenu) {
+            return;
+        }
+        computedProps.initialProps.renderRowContextMenu = renderClipboardContextMenu;
+    };
+    clipboardContextMenu();
     return {
         copyActiveRowToClipboard,
         pasteActiveRowFromClipboard,

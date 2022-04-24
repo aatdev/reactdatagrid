@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { RangeResultType } from '../../../types';
+
 const getRangesForGroups = ({
   data,
   initialOffset,
@@ -15,7 +17,7 @@ const getRangesForGroups = ({
   initialOffset: number;
   rowHeightManager: any;
   initialScrollTop: number;
-}) => {
+}): RangeResultType[] => {
   let keyPath: string[];
   let depth: number = 0;
   let value: string = '';

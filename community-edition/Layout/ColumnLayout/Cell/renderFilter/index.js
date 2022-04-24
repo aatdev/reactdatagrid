@@ -42,14 +42,35 @@ class GenericFilter extends React.Component {
         this.ref = (specificFilter) => {
             this.specificFilter = specificFilter;
         };
+        this.state = {
+            focused: false,
+            open: false,
+        };
     }
     onSettingsClick(e) {
+        if (!this.state.open) {
+            this.onMenuOpen(e);
+        }
+        else {
+            this.onMenuClose(e);
+        }
+    }
+    onMenuOpen = (e) => {
         e.preventDefault();
         this.props.cellInstance.showFilterContextMenu(this.settings);
         this.setState({
             focused: true,
+            open: true,
         });
-    }
+    };
+    onMenuClose = (e) => {
+        e.preventDefault();
+        this.props.cellInstance.hideFilterContextMenu();
+        this.setState({
+            focused: false,
+            open: false,
+        });
+    };
     componentDidMount() {
         if (this.props.cellInstance) {
             this.props.cellInstance.filter = this;
@@ -87,6 +108,9 @@ class GenericFilter extends React.Component {
             }
         }
         let settings;
+        let style = {
+            minHeight: props.filterRowHeight + 1, // adding the border
+        };
         if (filterValue) {
             const settingsIconClassName = 'InovuaReactDataGrid__column-header__filter-settings-icon';
             const settingsIcon = props.filterEditorProps && props.filterEditorProps.renderSettings ? (props.filterEditorProps.renderSettings({
@@ -98,7 +122,7 @@ class GenericFilter extends React.Component {
         }
         if (!filterValue) {
             className += ` ${filterWrapperClassName}--empty`;
-            return React.createElement("div", { className: className });
+            return React.createElement("div", { style: style, className: className });
         }
         const { filterTypes } = props;
         const filterTypeDescription = filterTypes[filterType] || { operators: [] };
@@ -123,9 +147,9 @@ class GenericFilter extends React.Component {
             filterType,
             theme: props.theme,
             render: (node) => {
-                return (React.createElement("div", { className: className },
+                return (React.createElement("div", { style: style, className: className },
                     node,
-                    settings));
+                    props.enableColumnFilterContextMenu && settings));
             },
         };
         const FilterEditor = props.filterEditor;

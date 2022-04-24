@@ -122,8 +122,12 @@ const computeData = (config, computedProps, batchUpdateQueue) => {
                 dataSourceCache: computedProps.computedDataSourceCache,
                 generateIdFromPath: computedProps.generateIdFromPath,
                 collapsingNodes: computedProps.collapsingNodesRef.current,
+                idProperty: !computedProps.compoundIdProperty
+                    ? computedProps.idProperty
+                    : 'id',
             });
         }
+        dataCountAfterFilter = config.data.length;
         return config;
     }, 
     // summary
@@ -163,9 +167,11 @@ const computeData = (config, computedProps, batchUpdateQueue) => {
         batchUpdateQueue(() => {
             computedProps.setUngroupedData(config.data);
         });
+        const { length } = config.data;
         if (Array.isArray(groupBy) &&
             groupBy.length &&
-            computedProps.computeDataStep) {
+            computedProps.computeDataStep &&
+            length) {
             config = computedProps.computeDataStep({
                 groupBy,
                 batchUpdateQueue,

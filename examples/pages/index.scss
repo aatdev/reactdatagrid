@@ -1,3 +1,6 @@
+
+@import './perf-demo/perf/styles/app.css';
+
 .global-datagrid-header-blue-background.global-datagrid-header-blue-background.global-datagrid-header-blue-background {
   background: #5b7bb7;
   color: #e9ecf0;
@@ -27,6 +30,11 @@
   font-style: italic;
 }
 
+.active-row-border.active-row-border.active-row-border {
+  border: 1px solid #8ee4c1;
+  border-radius: 4px;
+}
+
 .cell-edit__copy-paste__input {
   padding: 5px;
   outline: none;
@@ -37,6 +45,27 @@
   margin-bottom: 20px;
 
   &:focus {
-    border: 1px solid #7986cb;
+    border: 1px solid #4f8d75;
+  }
+}
+
+.custom-column-hover-class-name {
+  background:rgba(239, 154, 154, 0.15) !important;
+}
+
+.datagrid-demo__phone-icon {
+  position: absolute;
+  top: 13px;
+  width: 14px;
+  height: 14px;
+}
+
+.datagrid-demo__avatar-column.datagrid-demo__avatar-column.datagrid-demo__avatar-column {
+  min-height: 39px;
+
+  .InovuaReactDataGrid__cell__content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }

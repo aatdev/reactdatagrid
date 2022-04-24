@@ -230,6 +230,15 @@ export type CellProps = {
   showContextMenu?: (menuTool: any, onHide: any) => void;
   setActiveIndex?: func;
   renderColumnReorderProxy?: (props: any) => void;
+  columnHoverClassName?: string;
+  computedEnableColumnHover?: boolean;
+  renderRowDetailsMoreIcon?: () => void;
+  renderRowDetailsExpandIcon?: () => void;
+  renderRowDetailsCollapsedIcon?: () => void;
+  isRowDetailsCell?: boolean;
+  isCheckboxColumn?: boolean;
+  onColumnMouseEnter?: (props: CellProps) => void;
+  onColumnMouseLeave?: (props: CellProps) => void;
 };
 
 export type EnhancedCellProps = CellProps & {
@@ -270,4 +279,7 @@ export type CellRenderObject = {
   }) => boolean;
   totalDataCount: number;
   rendersInlineEditor: boolean;
+  renderRowDetailsExpandIcon: () => void;
+  renderRowDetailsCollapsedIcon: () => void;
+  renderRowDetailsMoreIcon: () => void;
 };

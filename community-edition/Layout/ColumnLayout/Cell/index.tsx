@@ -26,8 +26,8 @@ import renderSortTool from './renderSortTool';
 import { id as REORDER_COLUMN_ID } from '../../../normalizeColumns/defaultRowReorderColumnId';
 import TextEditor from './editors/Text';
 import Renderable from '../../../types/TypeRenderable';
-import { EnhancedCellProps, CellRenderObject } from './CellProps';
-import { setupResizeObserver } from '../../../utils/setupResizeObserver';
+import { EnhancedCellProps, CellRenderObject, CellProps } from './CellProps';
+// import { setupResizeObserver } from '../../../utils/setupResizeObserver';
 // import diff from '../../../packages/shallow-changes';
 
 const cellBem = bemFactory('InovuaReactDataGrid__cell');
@@ -59,6 +59,9 @@ const CELL_RENDER_OBJECT: CellRenderObject = sealedObjectFactory({
   cellProps: null,
   totalDataCount: null,
   rendersInlineEditor: null,
+  renderRowDetailsExpandIcon: null,
+  renderRowDetailsCollapsedIcon: null,
+  renderRowDetailsMoreIcon: null,
 });
 
 const CELL_RENDER_SECOND_OBJ = sealedObjectFactory({
@@ -166,6 +169,8 @@ export default class InovuaDataGridCell extends React.Component {
       onFocus: 1,
       onSortClick: 1,
       onTouchStart: 1,
+      onColumnMouseEnter: 1,
+      onColumnMouseLeave: 1,
     });
 
     const equalProps = areEqual.result;
@@ -175,7 +180,7 @@ export default class InovuaDataGridCell extends React.Component {
       //   areEqual.key,
       //   // this.props[areEqual.key!],
       //   // nextProps[areEqual.key!],
-      //   diff(nextProps, this.props)
+      //   // diff(nextProps, this.props)
       // );
       return true;
     }
@@ -347,10 +352,12 @@ export default class InovuaDataGridCell extends React.Component {
       computedPivot,
       computedResizable,
       groupColumnVisible,
-      lockable,
       computedFilterable,
       rtl,
       inEdit,
+      columnIndex,
+      columnIndexHovered,
+      columnHoverClassName,
     } = props;
 
     let { userSelect, headerUserSelect } = props;
@@ -435,7 +442,12 @@ export default class InovuaDataGridCell extends React.Component {
         `${baseClassName}--show-border-${rtl ? 'left' : 'right'}`,
       showBorderTop && `${baseClassName}--show-border-top`,
       showBorderBottom && `${baseClassName}--show-border-bottom`,
-      noBackground && `${baseClassName}--no-background`
+      noBackground && `${baseClassName}--no-background`,
+      columnIndex === columnIndexHovered
+        ? columnHoverClassName
+          ? join(`${baseClassName}--over`, columnHoverClassName)
+          : `${baseClassName}--over`
+        : ''
     );
 
     if (cellSelected) {
@@ -582,6 +594,9 @@ export default class InovuaDataGridCell extends React.Component {
       totalDataCount,
       computedVisibleIndex,
       inEdit,
+      renderRowDetailsMoreIcon,
+      renderRowDetailsExpandIcon,
+      renderRowDetailsCollapsedIcon,
     } = props;
 
     let { value, render: renderCell, renderSummary } = props;
@@ -616,6 +631,8 @@ export default class InovuaDataGridCell extends React.Component {
         onContextMenu: this.onContextMenu,
         onMouseDown: this.onMouseDown,
         onTouchStart: this.onTouchStart,
+        onMouseEnter: this.onCellEnter,
+        onMouseLeave: this.onCellLeave,
       }
     );
 
@@ -650,6 +667,8 @@ export default class InovuaDataGridCell extends React.Component {
       CELL_RENDER_OBJECT.loadNodeAsync = loadNodeAsync;
       CELL_RENDER_OBJECT.isRowExpandable = isRowExpandable;
       CELL_RENDER_OBJECT.totalDataCount = totalDataCount;
+      CELL_RENDER_OBJECT.renderRowDetailsExpandIcon = renderRowDetailsExpandIcon;
+      CELL_RENDER_OBJECT.renderRowDetailsCollapsedIcon = renderRowDetailsCollapsedIcon;
     }
 
     let rendersInlineEditor = headerCell
@@ -690,12 +709,12 @@ export default class InovuaDataGridCell extends React.Component {
       };
     }
 
-    if (onCellEnter) {
-      cellProps.onMouseEnter = this.onCellEnter;
+    if (headerCell) {
+      cellProps.onFocus = this.onHeaderCellFocus;
     }
 
     if (headerCell) {
-      cellProps.onFocus = this.onHeaderCellFocus;
+      CELL_RENDER_OBJECT.renderRowDetailsMoreIcon = renderRowDetailsMoreIcon;
     }
 
     if (headerCell) {
@@ -765,6 +784,7 @@ export default class InovuaDataGridCell extends React.Component {
       onMouseDown: cellProps.onMouseDown || initialDOMProps.onMouseDown,
       onTouchStart: cellProps.onTouchStart || initialDOMProps.onTouchStart,
       onMouseEnter: cellProps.onMouseEnter || initialDOMProps.onMouseEnter,
+      onMouseLeave: cellProps.onMouseLeave || initialDOMProps.onMouseLeave,
       style: initialDOMProps.style
         ? Object.assign({}, initialDOMProps.style, cellProps.style)
         : cellProps.style,
@@ -1145,17 +1165,65 @@ export default class InovuaDataGridCell extends React.Component {
     }
   }
 
-  onCellEnter(event) {
+  onColumnHoverMouseEnter = (props: CellProps) => {
+    if (
+      props.groupProps ||
+      props.groupSpacerColumn ||
+      props.isRowDetailsCell ||
+      props.isCheckboxColumn
+    ) {
+      return;
+    }
+
+    if (props.onColumnMouseEnter) {
+      props.onColumnMouseEnter(props);
+    }
+  };
+
+  onColumnHoverMouseLeave = (props: CellProps) => {
+    if (
+      props.groupProps ||
+      props.groupSpacerColumn ||
+      props.isRowDetailsCell ||
+      props.isCheckboxColumn
+    ) {
+      return;
+    }
+
+    if (props.onColumnMouseLeave) {
+      props.onColumnMouseLeave(props);
+    }
+  };
+
+  onCellEnter(event: MouseEvent) {
     const props = this.getProps();
+    const initialProps = this.getInitialDOMProps();
 
     if (props.onCellEnter) {
       props.onCellEnter(event, props);
     }
-
-    const initialProps = this.getInitialDOMProps();
+    if (props.computedEnableColumnHover) {
+      this.onColumnHoverMouseEnter(props);
+    }
 
     if (initialProps.onMouseEnter) {
       initialProps.onMouseEnter(event, props);
+    }
+  }
+
+  onCellLeave(event: MouseEvent) {
+    const props = this.getProps();
+    const initialProps = this.getInitialDOMProps();
+
+    if (props.onCellLeave) {
+      props.onCellLeave(event, props);
+    }
+    if (props.computedEnableColumnHover) {
+      this.onColumnHoverMouseLeave(props);
+    }
+
+    if (initialProps.onMouseLeave) {
+      initialProps.onMouseLeave(event, props);
     }
   }
 
@@ -1292,6 +1360,11 @@ export default class InovuaDataGridCell extends React.Component {
 
   onResizeMouseDown(cellProps, event) {
     const props = this.getProps();
+
+    this.hideFilterContextMenu();
+    if (props.hideColumnContextMenu) {
+      props.hideColumnContextMenu();
+    }
 
     if (props.onResizeMouseDown) {
       const node = this.getDOMNode();
@@ -1437,10 +1510,16 @@ export default class InovuaDataGridCell extends React.Component {
     }
   }
 
-  showContextMenu(menuTool, onHide) {
+  hideFilterContextMenu() {
+    if (this.props.hideColumnFilterContextMenu) {
+      this.props.hideColumnFilterContextMenu();
+    }
+  }
+
+  showContextMenu(domRef, onHide) {
     if (this.props.showColumnContextMenu) {
       this.props.showColumnContextMenu(
-        menuTool ? (menuTool.domRef ? menuTool.domRef.current : null) : null,
+        domRef ? domRef : null,
         this.getProps(),
         this,
         onHide
@@ -1719,4 +1798,7 @@ InovuaDataGridCell.propTypes = {
   setActiveIndex: PropTypes.func,
 
   renderColumnReorderProxy: PropTypes.func,
+  columnHoverClassName: PropTypes.string,
+  renderRowDetailsExpandIcon: PropTypes.func,
+  renderRowDetailsCollapsedIcon: PropTypes.func,
 };

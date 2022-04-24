@@ -82,6 +82,8 @@ export type TypeBuildColumnsProps = {
   rowExpandColumn: any;
   onRowReorder?: TypeRowReorder;
   rowReorderColumn?: IColumn;
+  renderRowDetailsExpandIcon?: () => void;
+  renderRowDetailsCollapsedIcon?: () => void;
 };
 type TypeI18n = { [key: string]: string | ReactNode };
 
@@ -336,8 +338,8 @@ type TypeDataGridPropsNoI18n = {
     nodeExpanded: boolean;
     node: any;
     data: any;
-    index: number;
     id: string | number;
+    index: number;
   }) => void;
 
   isNodeExpandable?: (args: {
@@ -682,6 +684,7 @@ type TypeDataGridPropsNoI18n = {
     width: number;
     height: number;
   }) => Element | ReactNode;
+  renderPaginationToolbar?: (props: TypePaginationProps) => Element | ReactNode;
   renderSortTool?: (direction: -1 | 0 | 1, extraProps: any) => void;
   enableClipboard?: boolean;
   onCopySelectedCellsChange?: (cells: any) => void;
@@ -691,6 +694,28 @@ type TypeDataGridPropsNoI18n = {
   pageSizes?: number[];
   onCellClick?: (event: MouseEvent, cellProps: TypeCellProps) => void;
   onRefresh?: () => void
+  enableTreeRowReorder?: boolean;
+  enableTreeRowReorderNestingChange?: boolean;
+  enableTreeRowReorderParentChange?: boolean;
+  showActiveRowIndicator?: boolean;
+  activeRowIndicatorClassName?: string;
+  onTreeRowReorderEnd?: ({
+    updatedTreeData,
+  }: {
+    updatedTreeData: any[];
+  }) => void;
+  enableColumnAutosize?: boolean;
+  getRows?: () => void;
+  getHeader?: () => void;
+  skipHeaderOnAutoSize?: boolean;
+  enableColumnHover?: boolean;
+  viewportSize?: TypeSize;
+  columnHoverClassName?: string;
+  idPropertySeparator: string;
+  renderRowDetailsExpandIcon?: () => void;
+  renderRowDetailsCollapsedIcon?: () => void;
+  treeGridChildrenSelectionEnabled?: boolean;
+  treeGridChildrenDeselectionEnabled?: boolean;
 };
 type TypeDataGridComputedClashingProps = {
   i18n?: TypeI18n;
@@ -704,6 +729,8 @@ export type TypePivotUniqueValuesDescriptor = {
   values: { [key: string]: TypePivotUniqueValuesDescriptor } | null;
 };
 export type TypeComputedProps = TypeDataGridPropsNoI18n & {
+  ColumnLayout?: any;
+  enableColumnFilterContextMenu?: boolean;
   filteredRowsCount?: (filteredRows: number) => number;
   dataCountAfterFilter?: number;
   computedLastActiveIndex: number | null;
@@ -754,6 +781,7 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
   getItemId: (item: object) => any;
   getItemAt: (index: number) => any;
   getItemIdAt: (index: number) => any;
+  getItemIndex: (id: string | number) => number;
   i18n: (key: string, defaultValue?: string) => string | ReactNode;
   rowHeightManager: any;
   computedSortInfo: TypeSortInfo;
@@ -1189,10 +1217,10 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
   collapsingNodesRef: MutableRefObject<{ [key: string]: boolean }>;
   clearNodeChildrenCache: (
     nodeId: string | number,
-    reccursive: boolean,
-    treeCache: { [key: string]: object },
-    callback: () => void,
-    clearedMap: { [key: string]: boolean }
+    recursive: boolean,
+    treeCache: TypeNodeCache | undefined,
+    clearedMap?: { [key: string]: boolean },
+    callback?: () => void
   ) => void;
   computedTreeEnabled: boolean;
   onGroupByChange?: (groupBy: TypeGroupBy) => void;
@@ -1254,7 +1282,12 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
   setItemAt: (
     index: number,
     item: any,
-    config?: { replace?: boolean; property?: string; value?: any }
+    config?: {
+      replace?: boolean;
+      property?: string;
+      value?: any;
+      deepCloning?: boolean;
+    }
   ) => void;
   setItemsAt: (items: any, config?: { replace?: boolean }) => void;
   activeRowRef: MutableRefObject<{ instance: any; node: HTMLElement } | null>;
@@ -1311,6 +1344,56 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
   computedHasColSpan: boolean;
   updateMainMenuPosition?: (alignTo: any) => void;
   isInEdit?: any;
+  availableWidth?: number;
+  computedEnableColumnHover?: boolean;
+  preventBlurOnContextMenuOpen?: MutableRefObject<boolean>;
+  copySelectedCellsToClipboard?: () => void;
+  copyActiveRowToClipboard?: () => void;
+  pasteSelectedCellsFromClipboard?: () => void;
+  pasteActiveRowFromClipboard?: () => void;
+  tryStartEdit?: ({
+    rowIndex,
+    columnId,
+    dir,
+  }: {
+    rowIndex: number;
+    columnId: number | string;
+    dir: number;
+  }) => void;
+  startEdit?: ({
+    rowIndex,
+    rowId,
+    columnId,
+    dir,
+    value,
+  }: {
+    rowIndex?: number;
+    rowId?: string;
+    columnId: string;
+    dir: number;
+    value: any;
+  }) => void;
+  completeEdit?: ({
+    rowId,
+    rowIndex,
+    dir,
+    columnId,
+    value,
+  }: {
+    rowId?: string;
+    rowIndex?: number;
+    dir: number;
+    columnId: string;
+    value: any;
+  }) => void;
+  cancelEdit?: ({
+    rowIndex,
+    columnId,
+  }: {
+    rowIndex?: number;
+    columnId?: string;
+  }) => void;
+  compoundIdProperty?: boolean;
 };
 
 export default TypeDataGridProps;

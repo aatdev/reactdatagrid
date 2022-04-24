@@ -91,6 +91,7 @@ const propTypes = {
   hasLockedStart: PropTypes.bool,
   showColumnContextMenu: PropTypes.func,
   showColumnFilterContextMenu: PropTypes.func,
+  hideColumnFilterContextMenu: PropTypes.func,
   onColumnHeaderFocus: PropTypes.func,
   showColumnMenuTool: PropTypes.bool,
   showColumnMenuToolOnHover: PropTypes.bool,
@@ -131,6 +132,17 @@ const propTypes = {
   setScrollLeft: PropTypes.func,
   sortedColumnsInfo: PropTypes.any,
   renderMenuTool: PropTypes.func,
+  columnHoverClassName: PropTypes.string,
+  onColumnMouseEnter: PropTypes.func,
+  onColumnMouseLeave: PropTypes.func,
+  columnIndexHovered: PropTypes.number,
+  enableColumnFilterContextMenu: PropTypes.bool,
+  computedEnableColumnHover: PropTypes.bool,
+  renderRowDetailsMoreIcon: PropTypes.func,
+  hideColumnContextMenu: PropTypes.func,
+  updateMenuPosition: PropTypes.func,
+  computedFilterable: PropTypes.bool,
+  filterRowHeight: PropTypes.number,
 };
 
 type TypeHeaderProps = {} | any;
@@ -188,9 +200,19 @@ export default class InovuaDataGridHeader extends React.Component<
       });
     }
 
+    if (prevProps.hasLockedStart && !this.props.hasLockedStart) {
+      setTimeout(() => this.updateColumns(), 0);
+    }
+
     if (
-      this.props.virtualizeColumns &&
-      prevProps.columnRenderCount !== this.props.columnRenderCount
+      (this.props.virtualizeColumns &&
+        prevProps.columnRenderCount !== this.props.columnRenderCount) ||
+      this.props.selectedCount !== prevProps.selectedCount ||
+      this.props.unselectedCount !== prevProps.unselectedCount ||
+      this.props.columns !== prevProps.columns ||
+      this.props.columnIndexHovered !== prevProps.columnIndexHovered ||
+      this.props.lockedStartColumns.length !==
+        prevProps.lockedStartColumns.length
     ) {
       this.setState({
         children: this.renderColumns(),
@@ -417,6 +439,10 @@ export default class InovuaDataGridHeader extends React.Component<
 
     if (headerHeight) {
       style.height = headerHeight;
+
+      if (props.computedFilterable) {
+        style.height += props.filterRowHeight;
+      }
     }
 
     style.zIndex = style.zIndex || 100 - (index || 0);
@@ -474,14 +500,13 @@ export default class InovuaDataGridHeader extends React.Component<
     }
   };
 
-  setScrollLeft = (scrollLeft: number) => {
+  setScrollLeft = (scrollLeft: number, scrollLeftMax?: number) => {
     this.scrollLeft = scrollLeft;
     const node = this.props.hasLocked
       ? this.getDOMNode().querySelector(
           '.InovuaReactDataGrid__unlocked-wrapper'
         )
       : this.getDOMNode();
-
     if (node) {
       const transformPos = this.props.rtl
         ? this.props.getScrollLeftMax() - scrollLeft
@@ -502,6 +527,10 @@ export default class InovuaDataGridHeader extends React.Component<
 
     if (this.props.virtualizeColumns) {
       this.maybeUpdateColumns();
+
+      if (scrollLeft === 0 || scrollLeft === scrollLeftMax) {
+        requestAnimationFrame(() => this.maybeUpdateColumns());
+      }
     }
   };
 
@@ -566,8 +595,8 @@ export default class InovuaDataGridHeader extends React.Component<
       return;
     }
     const OFFSET = 15;
-    const headerRegion = Region.from(body);
-    const targetRegion = Region.from(event.target);
+    const headerRegion = (Region as any).from(body);
+    const targetRegion = (Region as any).from(event.target);
 
     const scrollLeft = this.scrollLeft || this.props.scrollLeft || 0;
 
@@ -592,6 +621,7 @@ export default class InovuaDataGridHeader extends React.Component<
       data,
       showColumnContextMenu,
       showColumnFilterContextMenu,
+      hideColumnFilterContextMenu,
       deselectAll,
       firstLockedEndIndex,
       firstUnlockedIndex,
@@ -620,6 +650,16 @@ export default class InovuaDataGridHeader extends React.Component<
       theme,
       renderMenuTool,
       sortedColumnsInfo,
+      onColumnMouseEnter,
+      onColumnMouseLeave,
+      columnIndexHovered,
+      columnHoverClassName,
+      enableColumnFilterContextMenu,
+      computedEnableColumnHover,
+      renderRowDetailsMoreIcon,
+      hideColumnContextMenu,
+      updateMenuPosition,
+      filterRowHeight,
     } = props;
 
     let columns = props.columns;
@@ -651,6 +691,10 @@ export default class InovuaDataGridHeader extends React.Component<
           cellStyle = {};
         }
         cellStyle.height = props.headerHeight;
+
+        if (props.computedFilterable) {
+          cellStyle.height += props.filterRowHeight;
+        }
       }
 
       const defaults = {
@@ -667,6 +711,11 @@ export default class InovuaDataGridHeader extends React.Component<
         (defaults as any).headerUserSelect = columnHeaderUserSelect;
       }
 
+      let displayColumnFilterContextMenu = enableColumnFilterContextMenu;
+      if (column.enableColumnFilterContextMenu != null) {
+        displayColumnFilterContextMenu = column.enableColumnFilterContextMenu;
+      }
+
       const cellProps = Object.assign(defaults, column, {
         headerCell: true,
         headerHeight: props.headerHeight,
@@ -676,6 +725,7 @@ export default class InovuaDataGridHeader extends React.Component<
         totalCount,
         showColumnContextMenu,
         showColumnFilterContextMenu,
+        hideColumnFilterContextMenu,
         selectAll,
         deselectAll,
         style: cellStyle,
@@ -702,6 +752,17 @@ export default class InovuaDataGridHeader extends React.Component<
         data,
         theme,
         sortedColumnsInfo,
+        onColumnMouseEnter,
+        onColumnMouseLeave,
+        columnIndex: i,
+        columnIndexHovered,
+        columnHoverClassName,
+        enableColumnFilterContextMenu: displayColumnFilterContextMenu,
+        computedEnableColumnHover,
+        renderRowDetailsMoreIcon,
+        hideColumnContextMenu,
+        updateMenuPosition,
+        filterRowHeight,
       });
 
       cellProps.onFocus = this.onHeaderCellFocus.bind(this, cellProps, column);
