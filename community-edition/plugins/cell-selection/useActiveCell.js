@@ -4,11 +4,11 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import useProperty from '@inovua/reactdatagrid-community/hooks/useProperty';
 import { useLayoutEffect, useCallback } from 'react';
-import clamp from '@inovua/reactdatagrid-community/utils/clamp';
-import usePrevious from '@inovua/reactdatagrid-community/hooks/usePrevious';
-import batchUpdate from '@inovua/reactdatagrid-community/utils/batchUpdate';
+import useProperty from '../../hooks/useProperty';
+import clamp from '../../common/clamp';
+import usePrevious from '../..//hooks/usePrevious';
+import batchUpdate from '../../utils/batchUpdate';
 const useActiveCell = (props, computedPropsRef) => {
     let [computedActiveCell, doSetActiveCell] = useProperty(props, 'activeCell');
     if (!props.enableKeyboardNavigation) {

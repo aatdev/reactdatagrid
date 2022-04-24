@@ -21,10 +21,10 @@ import {
   useCallback,
   useRef,
 } from 'react';
-import useProperty from '@inovua/reactdatagrid-community/hooks/useProperty';
-import batchUpdate from '@inovua/reactdatagrid-community/utils/batchUpdate';
-import clamp from '@inovua/reactdatagrid-community/utils/clamp';
 import useActiveCell from './useActiveCell';
+import useProperty from '../../hooks/useProperty';
+import clamp from '../../common/clamp';
+import batchUpdate from '../../utils/batchUpdate';
 
 const getFirstSelectedCell = (
   cellSelection: [number, number][]

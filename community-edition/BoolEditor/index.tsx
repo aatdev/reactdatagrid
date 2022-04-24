@@ -8,9 +8,9 @@
 import React, { ReactElement, RefObject } from 'react';
 import PropTypes from 'prop-types';
 
-import cleanProps from '@inovua/reactdatagrid-community/packages/react-clean-props';
-import CheckBox from '@inovua/reactdatagrid-community/packages/CheckBox';
 import { CellProps } from '../Layout/ColumnLayout/Cell/CellProps';
+import cleanProps from '../common/cleanProps';
+import { CheckBox } from '../packages/RadioButtonGroup';
 
 type TypeFilterValue = {
   name: string;
