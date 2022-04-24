@@ -2,7 +2,7 @@
   "name": "@aatdev/reactdatagrid",
   "author": "Inovua Trading S.R.L. <contact@reactdatagrid.io>",
   "homepage": "https://reactdatagrid.io",
-  "version": "4.17.2",
+  "version": "4.17.5",
   "description": "Empower Your Data with the best React Data Grid there is",
   "main": "index.js",
   "publishConfig": {

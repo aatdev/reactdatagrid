@@ -64,6 +64,7 @@ const renderHeader = (
     <div
       key="content"
       style={style}
+      title={props.children?.[0]}
       className={`${HEADER_CONTENT_CLASS_NAME} ${
         props.headerEllipsis !== false
           ? 'InovuaReactDataGrid__box--ellipsis'

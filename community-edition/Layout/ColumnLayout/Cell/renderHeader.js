@@ -28,7 +28,7 @@ const renderHeader = (props, domProps, cellInstance, state = EMPTY_OBJECT) => {
     const style = headerProps && headerProps.headerCellStyle
         ? headerProps.headerCellStyle
         : null;
-    let content = (React.createElement("div", { key: "content", style: style, className: `${HEADER_CONTENT_CLASS_NAME} ${props.headerEllipsis !== false
+    let content = (React.createElement("div", { key: "content", style: style, title: props.children?.[0], className: `${HEADER_CONTENT_CLASS_NAME} ${props.headerEllipsis !== false
             ? 'InovuaReactDataGrid__box--ellipsis'
             : ''}`, children: renderContent(props) }));
     const menuTool = renderMenuTool(props, cellInstance);
