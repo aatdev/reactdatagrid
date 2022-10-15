@@ -10,6 +10,7 @@ import { CellProps } from '../Cell/CellProps';
 import { CSSProperties } from 'react';
 import Renderable from '../../../types/TypeRenderable';
 import { TypeDataGridProps } from '../../../types/TypeDataGridProps';
+import { TypeGroupTool } from '../../../types';
 
 type func = (...args: any[]) => any;
 
@@ -78,6 +79,7 @@ export type RowProps = {
   lastCellInRange?: any;
   lastNonEmpty?: boolean;
   lastRowInGroup?: boolean;
+  disabledRow?: boolean;
 
   maxWidth?: number;
   id?: string | number;
@@ -177,6 +179,7 @@ export type RowProps = {
   groupColumn?: any;
   computedShowZebraRows?: boolean;
   computedRowspans?: any;
+  rowspanZIndex?: number;
   editStartEvent?: string;
   computedHasColSpan?: boolean;
 
@@ -238,6 +241,9 @@ export type RowProps = {
   computedEnableColumnHover?: boolean;
   renderRowDetailsExpandIcon?: () => void;
   renderRowDetailsCollapsedIcon?: () => void;
+  renderGroupCollapseTool?: TypeGroupTool;
+  renderGroupExpandTool?: TypeGroupTool;
+  memorizedScrollLeft?: number;
 };
 
 export type EnhancedRowProps = RowProps & {

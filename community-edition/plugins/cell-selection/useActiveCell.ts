@@ -17,6 +17,7 @@ import useProperty from '../../hooks/useProperty';
 import clamp from '../../common/clamp';
 import usePrevious from '../..//hooks/usePrevious';
 import batchUpdate from '../../utils/batchUpdate';
+import throttle from '../../packages/trottle';
 
 const useActiveCell = (
   props: TypeDataGridProps,
@@ -303,7 +304,18 @@ const useActiveCell = (
     rowIndex = clamp(rowIndex, 0, maxRow);
     colIndex = clamp(colIndex, minCol, maxCol);
 
-    computedProps.setActiveCell!([rowIndex, colIndex]);
+    if (computedProps.activeCellThrottle) {
+      throttle(
+        () => computedProps.setActiveCell!([rowIndex, colIndex]),
+        computedProps.activeCellThrottle!,
+        {
+          trailing: true,
+          leading: false,
+        }
+      );
+    } else {
+      computedProps.setActiveCell!([rowIndex, colIndex]);
+    }
   }, []);
 
   return {

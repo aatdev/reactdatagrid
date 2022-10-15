@@ -37,7 +37,7 @@ const StickyRowsContainer = (props) => {
             }
             return result;
         });
-        rowsToTranslate.forEach((rowToTranslate, i) => {
+        rowsToTranslate.forEach((_rowToTranslate, i) => {
             const rowToTranslateIndex = rowsToTranslateIndexes[i];
             const domNode = domNodeRef.current;
             const rowNode = domNode.children[rowToTranslateIndex];
@@ -71,7 +71,9 @@ const StickyRowsContainer = (props) => {
         }
         renderedRowsRef.current = rows;
         rowElementsRef.current = content;
-        setEnteringRow(config);
+        requestAnimationFrame(() => {
+            setEnteringRow(config);
+        });
     };
     const getCurrentVisibleStickyRowsCount = () => {
         return rowElementsRef.current ? rowElementsRef.current.length : 0;

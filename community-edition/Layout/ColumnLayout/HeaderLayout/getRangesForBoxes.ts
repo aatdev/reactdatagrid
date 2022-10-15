@@ -7,9 +7,16 @@
 
 import Region from '../../../packages/region';
 
-export default (cells, getIndex) => {
-  return cells.map((c, i) => {
-    const node = c.domRef ? c.domRef.current : null;
+export default (
+  cells: any[],
+  getIndex?: (i: number, c: any, props: any) => void
+) => {
+  return (cells || []).map((c, i) => {
+    const node = c.domRef
+      ? c.domRef.current
+      : c.getDOMNode
+      ? c.getDOMNode()
+      : null;
     const reg = Region.from(node);
 
     const isCell = typeof c.getProps === 'function';

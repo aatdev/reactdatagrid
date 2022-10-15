@@ -12,14 +12,15 @@ import filter from '../../../community-edition/filter';
 import people from '../people';
 import flags from '../flags';
 import moment from 'moment';
+import { CellProps, TypeFilter } from '@inovua/reactdatagrid-community/types';
 
-const gridStyle = { minHeight: 400 };
+const gridStyle = { minHeight: 600 };
 
-const filterIcon = className => {
+const filterIcon = (className: string) => {
   return (
     <svg
       className={className}
-      enable-background="new 0 0 24 24"
+      enableBackground="new 0 0 24 24"
       height="24px"
       viewBox="0 0 24 24"
       width="24px"
@@ -34,14 +35,14 @@ const filterIcon = className => {
   );
 };
 
-const COUNTRIES = {
+const COUNTRIES: any = {
   ca: 'Canada',
   uk: 'United Kingdom',
   usa: 'United States of America',
 };
 
-const countries = people.reduce((countries, p) => {
-  if (countries.filter(c => c.id == p.country).length) {
+const countries: any = people.reduce((countries: any, p: any) => {
+  if (countries.filter((c: any) => c.id == p.country).length) {
     return countries;
   }
   countries.push({
@@ -81,7 +82,8 @@ const columns = [
     minWidth: 180,
     filterEditorProps: {
       placeholder: 'Name',
-      renderSettings: ({ className }) => filterIcon(className),
+      renderSettings: ({ className }: { className: string }) =>
+        filterIcon(className),
     },
   },
   {
@@ -105,15 +107,17 @@ const columns = [
       placeholder: 'All',
       dataSource: countries,
     },
-    render: ({ value }) => (flags[value] ? flags[value] : value),
+    render: ({ value }: { value: any }) =>
+      (flags as any)[value] ? (flags as any)[value] : value,
   },
   {
     name: 'birthDate',
     header: 'Bith date',
     defualtFlex: 1,
     minWidth: 200,
+    dateFormat: 'MM-DD-YYYY',
     filterEditor: DateFilter,
-    filterEditorProps: (props, { index }) => {
+    filterEditorProps: (props: any, { index }: { index: number }) => {
       // for range and notinrange operators, the index is 1 for the after field
       return {
         dateFormat: 'MM-DD-YYYY',
@@ -123,7 +127,7 @@ const columns = [
           index == 1 ? 'Created date is before...' : 'Created date is after...',
       };
     },
-    render: ({ value, cellProps }) => {
+    render: ({ value, cellProps }: { value: string; cellProps: CellProps }) => {
       return moment(value).format('MM-DD-YYYY');
     },
   },
@@ -139,7 +143,7 @@ const columns = [
     defaultFlex: 1,
     minWidth: 180,
     filterEditor: BoolFilter,
-    render: ({ data }) => {
+    render: ({ data }: { data: any }) => {
       return data.student ? 'Yes' : 'No';
     },
   },
@@ -164,11 +168,21 @@ const App = () => {
   const [filterValue, setFilterValue] = useState(defaultFilterValue);
 
   const onFilterValueChange = useCallback(filterValue => {
-    const data: any = filter(people, filterValue);
+    const data: any = (filter as TypeFilter)(people, filterValue);
 
     setFilterValue(filterValue);
     setDataSource(data);
   }, []);
+
+  const onEditComplete = useCallback(
+    ({ value, columnId, rowIndex }) => {
+      const data = [...dataSource];
+      data[rowIndex][columnId] = value;
+
+      setDataSource(data);
+    },
+    [dataSource]
+  );
 
   const filteredRowsCount = useCallback((filteredRows: number) => {
     // console.log('filteredRows', filteredRows);
@@ -185,6 +199,8 @@ const App = () => {
         columns={columns}
         dataSource={dataSource}
         filteredRowsCount={filteredRowsCount}
+        onEditComplete={onEditComplete}
+        editable={true}
         groups={groups}
         defaultGroupBy={[]}
         pagination

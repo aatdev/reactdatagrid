@@ -23,13 +23,8 @@ import getDropParent from './plugins/row-reorder/utils/getDropParent';
 import updateTreeData from './plugins/tree/tree/updateTreeData';
 import { getGlobal } from '@inovua/reactdatagrid-community/getGlobal';
 const globalObject = getGlobal();
-let DRAG_INFO = null;
-let scrolling = false;
-const SCROLL_MARGIN = 40;
-const DRAG_ROW_MAX_HEIGHT = 100;
 const raf = globalObject.requestAnimationFrame;
 const identity = (a) => a;
-let iterate = true;
 export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGridColumnLayout {
     dropIndex;
     dragBoxInitialHeight = 0;
@@ -43,6 +38,11 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
     dragRow;
     content;
     direction = 0;
+    SCROLL_MARGIN = 40;
+    DRAG_ROW_MAX_HEIGHT = 100;
+    iterate = true;
+    DRAG_INFO = null;
+    scrolling = false;
     gridScrollInterval;
     constructor(props) {
         super(props);
@@ -54,6 +54,11 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         };
         this.scrollTopRegionRef = createRef();
         this.scrollBottomRegionRef = createRef();
+        this.SCROLL_MARGIN = 40;
+        this.DRAG_ROW_MAX_HEIGHT = 100;
+        this.iterate = true;
+        this.DRAG_INFO = null;
+        this.scrolling = false;
     }
     renderLockedEndRows = (computedProps) => {
         return this.renderLockedRows(computedProps.computedLockedEndRows, 'end', computedProps);
@@ -82,12 +87,14 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         return (React.createElement(ScrollingRegion, { ref: this.scrollBottomRegionRef, dir: 1, onMouseEnter: (event) => this.onScrollingRegionMouseEnter(event, 1), onMouseLeave: this.onScrollingRegionMouseLeave }));
     };
     onScrollingRegionMouseEnter = (event, dir) => {
-        event.preventDefault();
-        if (DRAG_INFO && DRAG_INFO.dragging) {
-            scrolling = true;
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+        if (this.DRAG_INFO && this.DRAG_INFO.dragging) {
+            this.scrolling = true;
             const props = this.lastComputedProps;
             const { rowReorderScrollByAmount, rowReorderAutoScrollSpeed } = props;
-            if (scrolling && dir) {
+            if (this.scrolling && dir) {
                 globalObject.clearInterval(this.gridScrollInterval);
                 this.gridScrollInterval = globalObject.setInterval(() => this.startScrolling(rowReorderScrollByAmount, dir), rowReorderAutoScrollSpeed);
             }
@@ -112,7 +119,7 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         this.setScrollTop(scrollTop);
     };
     onScrollingRegionMouseLeave = () => {
-        scrolling = false;
+        this.scrolling = false;
         this.setReorderArrowVisible(true);
         globalObject.clearInterval(this.gridScrollInterval);
     };
@@ -153,7 +160,7 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
             cellRegion,
             dragBoxInitialRegion,
         });
-        this.setScrollRegionVisibility();
+        this.setScrollRegionVisibility(props);
         dragProxy.setHeight(dragRowHeight);
         dragProxy.setTop(dragProxyPosition.top);
         dragProxy.setLeft(dragProxyPosition.left);
@@ -163,7 +170,8 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
             contentRegion,
             dragBoxInitialRegion,
         });
-        DRAG_INFO = {
+        this.dragStartCallbacks(props, dragIndex, selectedGroup);
+        this.DRAG_INFO = {
             dragging: true,
             dragIndex,
             ranges,
@@ -179,7 +187,7 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
             leftBoxOffset,
             scrollTopMax: this.getScrollTopMax(),
         };
-        iterate = true;
+        this.iterate = true;
         this.setReorderArrowAt(dragIndex, ranges, 0);
         setupRowDrag(event, dragBoxInitialRegion, {
             onDrag: (event, config) => this.onRowDrag(event, config, props),
@@ -187,17 +195,17 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         });
     };
     onRowDrag = (_event, config, props) => {
-        if (!DRAG_INFO) {
+        if (!this.DRAG_INFO) {
             return;
         }
-        const { dragIndex, dragBoxInitialRegion, dragProxy, dragBoxOffsets, } = DRAG_INFO;
-        const { initialDiffTop, initialDiffLeft, dragProxyAjust, scrollDiff, scrollTop, diffTop, diffLeft, } = this.adjustScrollOnDrag(props, config);
-        const { dragProxyTop, dragProxyLeft } = this.ajustDragProxy({
+        const { dragIndex, dragBoxInitialRegion, dragProxy, dragBoxOffsets, } = this.DRAG_INFO;
+        const { initialDiffTop, initialDiffLeft, dragProxyAdjust, scrollDiff, scrollTop, diffTop, diffLeft, } = this.adjustScrollOnDrag(props, config);
+        const { dragProxyTop, dragProxyLeft } = this.adjustDragProxy({
             diffTop,
             diffLeft,
             initialDiffTop,
             initialDiffLeft,
-            dragProxyAjust,
+            dragProxyAdjust,
         });
         dragProxy.setTop(dragProxyTop);
         dragProxy.setLeft(dragProxyLeft);
@@ -248,6 +256,12 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
     onRowDrop = (_event, _config, props) => {
         const { dropIndex } = this;
         const { onRowReorder, setActiveIndex, computedGroupBy, computedTreeEnabled, generateIdFromPath, enableTreeRowReorderNestingChange, } = props;
+        this.dragEndCallbacks(props, dropIndex);
+        if (!this.DRAG_INFO) {
+            this.clearDropInfo();
+            return;
+        }
+        let { dragIndex } = this.DRAG_INFO;
         if (dropIndex === -1 &&
             computedTreeEnabled &&
             enableTreeRowReorderNestingChange) {
@@ -259,7 +273,6 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
             this.clearDropInfo();
             return;
         }
-        let { dragIndex } = DRAG_INFO;
         if (dropIndex === dragIndex) {
             this.clearDropInfo();
             return;
@@ -293,9 +306,9 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
     };
     updateTree = (props, dragIndex, dropIndex) => {
         const { data, silentSetData, nodePathSeparator, onTreeRowReorderEnd, } = props;
-        const { selectedParent, dropParent } = DRAG_INFO;
+        const { selectedParent, dropParent } = this.DRAG_INFO;
         if (this.validDropPositions[dropIndex]) {
-            const { dropDepth } = DRAG_INFO;
+            const { dropDepth } = this.DRAG_INFO;
             const direction = this.direction;
             const dataSource = moveYAfterX(data, dragIndex, dropIndex);
             const newDataSource = this.recomputeNodeProps(dataSource, direction, dropIndex, dropDepth, dropParent, nodePathSeparator);
@@ -313,7 +326,8 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
     };
     updateGroups = (props, dragIndex, dropIndex) => {
         const { data, silentSetData, setItemOnReorderingGroups } = props;
-        const { dropGroup, selectedGroup } = DRAG_INFO;
+        const { dropGroup, selectedGroup } = this.DRAG_INFO;
+        this.dragEndGroupCallbacks(props, dropIndex, dropGroup);
         if (!selectedGroup.localeCompare(dropGroup)) {
             const newDataSource = moveYAfterX(data, dragIndex, dropIndex);
             silentSetData(newDataSource);
@@ -363,10 +377,10 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         const nodesName = props.nodesProperty;
         const generateIdFromPath = props.generateIdFromPath;
         let dataSource = [...data];
-        const { selectedParent: selectedPath } = DRAG_INFO;
+        const { selectedParent: selectedPath } = this.DRAG_INFO;
         const depth = dataSource[dragIndex].__nodeProps.depth + dir;
         const computeNesting = (dataArray, result = [], parentNode) => {
-            if (iterate) {
+            if (this.iterate) {
                 for (let i = 0; i < dataArray.length; i++) {
                     const item = dataArray[i];
                     if (!item) {
@@ -401,7 +415,8 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
                                 __extraNodeProps: extraNodeProps,
                             };
                             parentNodes[i] = itemWithExtraProps;
-                            iterate = false;
+                            this.iterate = false;
+                            props.reload();
                             break;
                         }
                     }
@@ -438,7 +453,7 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
     };
     computeItem = (props) => {
         const { computedGroupBy: groupBy } = props;
-        const { dropKeyPath } = DRAG_INFO;
+        const { dropKeyPath } = this.DRAG_INFO;
         if (!dropKeyPath) {
             return {};
         }
@@ -465,23 +480,23 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         };
     };
     getDropGroup = () => {
-        const { ranges, dragBoxRegion } = DRAG_INFO;
+        const { ranges, dragBoxRegion } = this.DRAG_INFO;
         const { dropGroup, keyPath: dropKeyPath } = getDropGroup({
             ranges,
             dragBoxRegion,
         });
-        DRAG_INFO = Object.assign({}, DRAG_INFO, {
+        this.DRAG_INFO = Object.assign({}, this.DRAG_INFO, {
             dropGroup,
             dropKeyPath,
         });
     };
     getDropParent = () => {
-        const { ranges, dragBoxRegion } = DRAG_INFO;
+        const { ranges, dragBoxRegion } = this.DRAG_INFO;
         const { dropParent, dropDepth } = getDropParent({
             ranges,
             dragBoxRegion,
         });
-        DRAG_INFO = Object.assign({}, DRAG_INFO, {
+        this.DRAG_INFO = Object.assign({}, this.DRAG_INFO, {
             dropParent,
             dropDepth,
         });
@@ -520,21 +535,25 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         }
         this.dragBoxInitialHeight =
             dragBoxInitialRegion && dragBoxInitialRegion.getHeight();
-        if (DRAG_ROW_MAX_HEIGHT &&
+        if (this.DRAG_ROW_MAX_HEIGHT &&
             dragBoxInitialRegion &&
-            dragBoxInitialRegion.getHeight() > DRAG_ROW_MAX_HEIGHT) {
-            dragBoxInitialRegion.setHeight(DRAG_ROW_MAX_HEIGHT);
+            dragBoxInitialRegion.getHeight() > this.DRAG_ROW_MAX_HEIGHT) {
+            dragBoxInitialRegion.setHeight(this.DRAG_ROW_MAX_HEIGHT);
             dragBoxInitialRegion.shift({
-                top: this.dragBoxInitialHeight / 2 - DRAG_ROW_MAX_HEIGHT / 2,
+                top: this.dragBoxInitialHeight / 2 - this.DRAG_ROW_MAX_HEIGHT / 2,
             });
         }
         const dragRowHeight = dragBoxInitialRegion.getHeight();
         return { dragBoxInitialRegion, dragRowHeight };
     };
-    setScrollRegionVisibility = () => {
+    setScrollRegionVisibility = (props) => {
         if (this.scrollTopRegionRef.current) {
             this.scrollTopRegionRef.current.setVisible(true);
-            const height = this.headerLayout && this.headerLayout.headerNode.offsetHeight;
+            const height = (this.headerLayout &&
+                this.headerLayout.headerNode &&
+                this.headerLayout.headerNode.offsetHeight) ||
+                props.rowHeight / 2 ||
+                0;
             this.scrollTopRegionRef.current.setHeight(height);
         }
         if (this.scrollBottomRegionRef.current) {
@@ -583,7 +602,7 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         return { ranges, selectedGroup, selectedParent };
     };
     compareRanges = ({ scrollDiff }) => {
-        const { ranges } = DRAG_INFO;
+        const { ranges } = this.DRAG_INFO;
         const mapRange = (r) => {
             if (!r) {
                 return null;
@@ -601,8 +620,8 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         };
         return ranges.map(mapRange);
     };
-    ajustDragProxy = ({ diffTop, diffLeft, initialDiffTop, initialDiffLeft, dragProxyAjust, }) => {
-        const { dragBoxRegion, dragBoxInitialRegion, dragBoxOffsets, headerHeight, leftBoxOffset, } = DRAG_INFO;
+    adjustDragProxy = ({ diffTop, diffLeft, initialDiffTop, initialDiffLeft, dragProxyAdjust, }) => {
+        const { dragBoxRegion, dragBoxInitialRegion, dragBoxOffsets, headerHeight, leftBoxOffset, } = this.DRAG_INFO;
         dragBoxRegion.set({
             top: dragBoxInitialRegion.top,
             bottom: dragBoxInitialRegion.bottom,
@@ -616,7 +635,7 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         const dragProxyTop = dragBoxInitialRegion.top -
             dragBoxOffsets.top +
             initialDiffTop -
-            dragProxyAjust +
+            dragProxyAdjust +
             headerHeight;
         const dragProxyLeft = dragBoxInitialRegion.left -
             dragBoxOffsets.left +
@@ -625,8 +644,8 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         return { dragProxyTop, dragProxyLeft };
     };
     getValidDropPositions = (props, dragIndex, dropIndex) => {
-        const { computedGroupBy, data, count, isRowReorderValid, allowRowReoderBetweenGroups, computedTreeEnabled, enableTreeRowReorderParentChange, nodePathSeparator, groupPathSeparator, generateIdFromPath, } = props;
-        const { selectedGroup, selectedParent } = DRAG_INFO;
+        const { computedGroupBy, data, count, isRowReorderValid, allowRowReorderBetweenGroups, computedTreeEnabled, enableTreeRowReorderParentChange, nodePathSeparator, groupPathSeparator, generateIdFromPath, } = props;
+        const { selectedGroup, selectedParent } = this.DRAG_INFO;
         const validDropPositions = dropIndexValidation({
             data,
             count,
@@ -637,7 +656,7 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
             selectedParent,
             nodePathSeparator,
             groupPathSeparator,
-            allowRowReoderBetweenGroups,
+            allowRowReorderBetweenGroups,
             computedGroupBy,
             computedTreeEnabled,
             generateIdFromPath,
@@ -650,13 +669,13 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         globalObject.clearInterval(this.gridScrollInterval);
         this.dragBoxInitialHeight = 0;
         this.setReorderArrowVisible(false);
-        if (!DRAG_INFO) {
+        if (!this.DRAG_INFO) {
             return;
         }
-        const { dragProxy } = DRAG_INFO;
+        const { dragProxy } = this.DRAG_INFO;
         this.dropIndex = -1;
         dragProxy.setVisible(false);
-        DRAG_INFO = null;
+        this.DRAG_INFO = null;
         if (this.scrollTopRegionRef.current) {
             this.scrollTopRegionRef.current.setVisible(false);
         }
@@ -665,15 +684,15 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         }
     };
     cancelDrop = () => {
-        if (DRAG_INFO) {
-            DRAG_INFO.dragProxy.setVisible(false);
+        if (this.DRAG_INFO) {
+            this.DRAG_INFO.dragProxy.setVisible(false);
         }
         this.setReorderArrowVisible(false);
-        DRAG_INFO = null;
+        this.DRAG_INFO = null;
     };
     adjustScrollOnDrag = (props, config) => {
         const { rowReorderScrollByAmount } = props;
-        const { contentRegion, scrollTopMax, dragBoxInitialRegion, initialScrollTop, } = DRAG_INFO;
+        const { contentRegion, scrollTopMax, dragBoxInitialRegion, initialScrollTop, } = this.DRAG_INFO;
         let diffTop = config.diff.top;
         let diffLeft = config.diff.left;
         const minScrollTop = Math.max(contentRegion.top, 0);
@@ -683,36 +702,36 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         const initialDiffTop = diffTop;
         const initialDiffLeft = diffLeft;
         diffTop += scrollDiff;
-        let scrollAjust = 0;
-        let dragProxyAjust = 0;
+        let scrollAdjust = 0;
+        let dragProxyAdjust = 0;
         if (dragBoxInitialRegion.top + initialDiffTop <
-            minScrollTop + SCROLL_MARGIN &&
+            minScrollTop + this.SCROLL_MARGIN &&
             initialDiffTop < 0) {
-            scrollAjust = -rowReorderScrollByAmount;
+            scrollAdjust = -rowReorderScrollByAmount;
         }
         else if (dragBoxInitialRegion.top + initialDiffTop >
-            maxScrollTop - SCROLL_MARGIN &&
+            maxScrollTop - this.SCROLL_MARGIN &&
             initialDiffTop > 0) {
-            scrollAjust = rowReorderScrollByAmount;
+            scrollAdjust = rowReorderScrollByAmount;
         }
-        if (scrollAjust) {
-            if (scrollTop + scrollAjust < 0) {
-                scrollAjust = -scrollTop;
+        if (scrollAdjust) {
+            if (scrollTop + scrollAdjust < 0) {
+                scrollAdjust = -scrollTop;
             }
-            if (scrollTop + scrollAjust > scrollTopMax) {
-                scrollAjust = scrollTopMax - scrollTop;
+            if (scrollTop + scrollAdjust > scrollTopMax) {
+                scrollAdjust = scrollTopMax - scrollTop;
             }
-            if (scrollAjust) {
+            if (scrollAdjust) {
                 if (!props.rowReorderAutoScroll) {
-                    this.setScrollTop(scrollTop + scrollAjust);
+                    this.setScrollTop(scrollTop + scrollAdjust);
                 }
-                dragProxyAjust = scrollAjust;
+                dragProxyAdjust = scrollAdjust;
             }
         }
         return {
             initialDiffTop,
             initialDiffLeft,
-            dragProxyAjust,
+            dragProxyAdjust,
             scrollDiff,
             scrollTop,
             diffTop,
@@ -720,8 +739,9 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         };
     };
     setReorderArrowAt = (index, ranges, direction, visible) => {
-        visible = visible !== undefined ? visible : index !== DRAG_INFO.dragIndex;
-        if (!scrolling) {
+        visible =
+            visible !== undefined ? visible : index !== this.DRAG_INFO.dragIndex;
+        if (!this.scrolling) {
             this.setReorderArrowVisible(visible);
         }
         let box = ranges[index];
@@ -731,7 +751,7 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
         if (box.group) {
             return;
         }
-        const { contentRegion } = DRAG_INFO;
+        const { contentRegion } = this.DRAG_INFO;
         let boxPos;
         let dragRowArrowHeight = this.dragRowArrow.props
             .rowReorderArrowStyle
@@ -765,6 +785,33 @@ export default class InovuaDataGridEnterpriseColumnLayout extends InovuaDataGrid
     };
     setReorderArrowVisible = (visible) => {
         this.dragRowArrow.setVisible(visible);
+    };
+    dragStartCallbacks = (props, dragIndex, selectedGroup) => {
+        const data = props.data[dragIndex];
+        const grouped = props.computedGroupBy && props.computedGroupBy.length > 0;
+        if (grouped) {
+            props.onGroupRowReorderStart &&
+                props.onGroupRowReorderStart({
+                    data,
+                    dragIndex,
+                    dragGroup: selectedGroup,
+                });
+        }
+        else {
+            props.onRowReorderStart && props.onRowReorderStart({ data, dragIndex });
+        }
+    };
+    dragEndCallbacks = (props, dropIndex) => {
+        if (dropIndex) {
+            const data = props.data[dropIndex];
+            props.onRowReorderEnd && props.onRowReorderEnd({ data, dropIndex });
+        }
+    };
+    dragEndGroupCallbacks = (props, dropIndex, dropGroup) => {
+        if (dropIndex !== undefined && props.onGroupRowReorderEnd) {
+            const data = props.data[dropIndex];
+            props.onGroupRowReorderEnd({ data, dropIndex, dropGroup });
+        }
     };
     onRowReorderValidation = (ev, props, dragIndex) => {
         if ((ev.isDefaultPrevented && ev.isDefaultPrevented()) ||

@@ -8,7 +8,7 @@ import React from 'react';
 import Row from './Row';
 import getRowSpans from './getRowSpans';
 const emptyObject = Object.freeze ? Object.freeze({}) : {};
-const renderRows = ({ from, to, empty, renderIndex, editRowIndex, editValue, editColumnIndex, editColumnId, setRowSpan, sticky, rowHeight, tryNextRowEdit, onEditStop, onEditStart, onEditValueChange, scrollLeft, columnRenderCount, columnRenderStartIndex, }, { 
+const renderRows = ({ from, to, empty, renderIndex, editRowIndex, editValue, editColumnIndex, editColumnId, setRowSpan, sticky, rowHeight, tryNextRowEdit, onEditStop, onEditStart, onEditValueChange, scrollLeft, columnRenderCount, columnRenderStartIndex, memorizedScrollLeft, }, { 
 // the full data array
 availableWidth, data, onTransitionEnd, columns, computedPivot, groupColumn, activeRowRef, columnsMap, renderLockedStartCells, renderLockedEndCells, computedOnCellMouseDown, computedEnableRowspan, lockedStartColumns, lockedEndColumns, renderDetailsGrid, editable, rowDetailsWidth, scrollbars, scrollToColumn, scrollToIndexIfNeeded, hasLockedStart, hasLockedEnd, computedShowEmptyRows, setRowSelected, setRowExpanded, toggleRowExpand, toggleNodeExpand, expandOnMouseDown, loadNodeAsync, computedTreeEnabled, computedActiveCell, rtl, naturalRowHeight, lastCellInRange, getCellSelectionKey, onRowContextMenu, 
 // should have the following props:
@@ -18,7 +18,7 @@ columnGroupCount, columnGroupIndex, columnUserSelect, selectAll, deselectAll, ex
 // row event handlers
 onRowMouseEnter, onRowMouseLeave, computedOnRowClick, onCellClick, onCellSelectionDraggerMouseDown, onCellMouseDown, onCellEnter, onColumnMouseEnter, onColumnMouseLeave, columnIndexHovered, onEditCancel, onEditComplete, computedCellMultiSelectionEnabled, nativeScroll, renderRow, onRenderRow, rowClassName, rowStyle, rowFactory, rowProps: passedProps = emptyObject, rowKey, cellFactory, 
 // selected can be an object or an index
-computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeCollapseTool, renderTreeExpandTool, renderTreeLoadingTool, isRowExpanded, rowExpandHeight, isRowExpandedById, computedRenderRowDetails, isRowExpandableAt, computedRowExpandEnabled, computedRowMultiSelectionEnabled, computedRowSelectionEnabled, computedActiveIndex, computedSkip, computedShowZebraRows, computedHasColSpan, rowHeight: initialRowHeight, totalColumnCount, totalComputedWidth, totalLockedStartWidth, totalLockedEndWidth, totalUnlockedWidth, currentDataSourceCount, computedShowCellBorders, emptyScrollOffset, showHorizontalCellBorders, showVerticalCellBorders, getScrollLeftMax, shouldRenderCollapsedRowDetails, rowDetailsStyle, minRowWidth, maxWidth, startIndex = 0, groupNestingSize, treeNestingSize, onGroupToggle, computedCollapsedGroups, computedExpandedGroups, groupPathSeparator, renderGroupTitle, renderGroupTool, renderLockedEndGroupTitle, renderUnlockedGroupTitle, virtualizeColumns, computedLivePagination, onRowReorder, onDragRowMouseDown, theme, onContextMenu, setActiveIndex, currentEditCompletePromise, enableColumnAutosize, columnHoverClassName, computedEnableColumnHover, renderRowDetailsExpandIcon, renderRowDetailsCollapsedIcon, computedOnRowMouseDown, }) => {
+computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeCollapseTool, renderTreeExpandTool, renderGroupCollapseTool, renderGroupExpandTool, renderTreeLoadingTool, isRowExpanded, rowExpandHeight, isRowExpandedById, computedRenderRowDetails, isRowExpandableAt, computedRowExpandEnabled, computedRowMultiSelectionEnabled, computedRowSelectionEnabled, computedActiveIndex, computedSkip, computedShowZebraRows, computedHasColSpan, rowHeight: initialRowHeight, totalColumnCount, totalComputedWidth, totalLockedStartWidth, totalLockedEndWidth, totalUnlockedWidth, currentDataSourceCount, computedShowCellBorders, emptyScrollOffset, showHorizontalCellBorders, showVerticalCellBorders, getScrollLeftMax, shouldRenderCollapsedRowDetails, rowDetailsStyle, minRowWidth, maxWidth, startIndex = 0, groupNestingSize, treeNestingSize, onGroupToggle, computedCollapsedGroups, computedExpandedGroups, groupPathSeparator, renderGroupTitle, renderGroupTool, renderLockedEndGroupTitle, renderUnlockedGroupTitle, virtualizeColumns, computedLivePagination, onRowReorder, onDragRowMouseDown, theme, onContextMenu, setActiveIndex, currentEditCompletePromise, enableColumnAutosize, columnHoverClassName, computedEnableColumnHover, renderRowDetailsExpandIcon, renderRowDetailsCollapsedIcon, computedOnRowMouseDown, disabledRows, }) => {
     const remoteOffset = computedLivePagination ? 0 : computedSkip || 0;
     const totalCount = data.length;
     let dataArray = data.slice(from, to);
@@ -53,6 +53,7 @@ computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeColl
                 : computedSelected == id);
         const rowExpanded = isRowExpandedById(id);
         const rowProps = {
+            rowspanZIndex: totalCount - realIndex,
             availableWidth,
             computedGroupBy,
             expandGroupTitle,
@@ -200,6 +201,8 @@ computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeColl
             setActiveIndex,
             renderTreeCollapseTool,
             renderTreeExpandTool,
+            renderGroupCollapseTool,
+            renderGroupExpandTool,
             renderTreeLoadingTool,
             currentEditCompletePromise,
             enableColumnAutosize,
@@ -207,6 +210,8 @@ computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeColl
             computedEnableColumnHover,
             renderRowDetailsExpandIcon,
             renderRowDetailsCollapsedIcon,
+            memorizedScrollLeft,
+            disabledRow: disabledRows ? disabledRows[realIndex] : null,
         };
         if (rowProps.rowIndex === editRowIndex) {
             rowProps.editing = true;

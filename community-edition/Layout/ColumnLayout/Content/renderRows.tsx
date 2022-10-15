@@ -32,6 +32,7 @@ const renderRows = (
     scrollLeft,
     columnRenderCount,
     columnRenderStartIndex,
+    memorizedScrollLeft,
   }: any,
   {
     // the full data array
@@ -129,6 +130,8 @@ const renderRows = (
     renderNodeTool,
     renderTreeCollapseTool,
     renderTreeExpandTool,
+    renderGroupCollapseTool,
+    renderGroupExpandTool,
     renderTreeLoadingTool,
     isRowExpanded,
     rowExpandHeight,
@@ -183,6 +186,7 @@ const renderRows = (
     renderRowDetailsExpandIcon,
     renderRowDetailsCollapsedIcon,
     computedOnRowMouseDown,
+    disabledRows,
   }: any
 ) => {
   const remoteOffset = computedLivePagination ? 0 : computedSkip || 0;
@@ -196,13 +200,13 @@ const renderRows = (
     dataArray = [null];
   }
 
-  let depth = null;
+  let depth: number | null = null;
 
   if (isGrouped) {
     depth = computedGroupBy.length;
   }
 
-  return dataArray.map((rowData, i) => {
+  return dataArray.map((rowData: any, i: number) => {
     const index = i + startIndex;
     const id = rowData ? getItemId(rowData) : i;
     const realIndex = index + from;
@@ -231,6 +235,7 @@ const renderRows = (
     const rowExpanded = isRowExpandedById(id);
 
     const rowProps = {
+      rowspanZIndex: totalCount - realIndex,
       availableWidth,
       computedGroupBy,
       expandGroupTitle,
@@ -381,6 +386,8 @@ const renderRows = (
       setActiveIndex,
       renderTreeCollapseTool,
       renderTreeExpandTool,
+      renderGroupCollapseTool,
+      renderGroupExpandTool,
       renderTreeLoadingTool,
       currentEditCompletePromise,
       enableColumnAutosize,
@@ -388,6 +395,8 @@ const renderRows = (
       computedEnableColumnHover,
       renderRowDetailsExpandIcon,
       renderRowDetailsCollapsedIcon,
+      memorizedScrollLeft,
+      disabledRow: disabledRows ? disabledRows[realIndex] : null,
     };
 
     if (rowProps.rowIndex === editRowIndex) {

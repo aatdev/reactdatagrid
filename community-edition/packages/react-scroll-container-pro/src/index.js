@@ -4,7 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React, { Component, createElement } from 'react';
+import React, { Component, createElement, createRef, } from 'react';
 import PropTypes from 'prop-types';
 import debounce from '../../../packages/debounce';
 import autoBind from '../../../packages/react-class/autoBind';
@@ -46,6 +46,8 @@ const OTHER_ORIENTATION = {
 export default class InovuaScrollContainer extends Component {
     scrollerScrollSize;
     scrollerClientSize;
+    refScroller;
+    scrollerNode;
     constructor(props) {
         super(props);
         autoBind(this, {
@@ -109,17 +111,17 @@ export default class InovuaScrollContainer extends Component {
         this.refView = v => {
             this.viewNode = v;
         };
-        this.refScroller = c => {
-            if (props.usePassiveScroll) {
-                if (c) {
-                    this.setupPassiveScrollListener(c);
-                }
-                else {
-                    this.removePassiveScrollListener(this.scrollerNode);
-                }
-            }
-            this.scrollerNode = c;
-        };
+        this.refScroller = createRef();
+        // this.refScroller = c => {
+        //   if (props.usePassiveScroll) {
+        //     if (c) {
+        //       this.setupPassiveScrollListener(c);
+        //     } else {
+        //       this.removePassiveScrollListener(this.scrollerNode);
+        //     }
+        //   }
+        //   this.scrollerNode = c;
+        // };
     }
     // ADJUST WRAPPER ON SCROLL INTO VIEW!!!
     onWrapperScroll(event) {
@@ -158,7 +160,7 @@ export default class InovuaScrollContainer extends Component {
             passive: true,
         });
     }
-    removePassiveScrollListener(node = this.scrollerNode) {
+    removePassiveScrollListener(node = this.getScrollerNode()) {
         if (node) {
             node.removeEventListener('scroll', this.onScroll, {
                 passive: true,
@@ -172,6 +174,22 @@ export default class InovuaScrollContainer extends Component {
         }
         if (typeof this.props.onWillUnmount === 'function') {
             this.props.onWillUnmount(this);
+        }
+    }
+    componentDidMount() {
+        this.unmounted = false;
+        this.scrollerNode = this.refScroller.current;
+        const scrollerNode = this.getScrollerNode();
+        if (this.props.usePassiveScroll) {
+            if (scrollerNode) {
+                this.setupPassiveScrollListener(scrollerNode);
+            }
+            else {
+                this.removePassiveScrollListener(scrollerNode);
+            }
+        }
+        if (typeof this.props.onDidMount === 'function') {
+            this.props.onDidMount(this, this.getDOMNode(), this._scrollerResizer);
         }
     }
     shouldComponentUpdate(nextProps, nextState) {
@@ -374,11 +392,6 @@ export default class InovuaScrollContainer extends Component {
             }
         }
     }
-    componentDidMount() {
-        if (typeof this.props.onDidMount === 'function') {
-            this.props.onDidMount(this, this.getDOMNode(), this._scrollerResizer);
-        }
-    }
     getDOMNode() {
         return this.domNode;
     }
@@ -545,7 +558,9 @@ export default class InovuaScrollContainer extends Component {
     }
     getScrollerNode() {
         this.scrollerNode =
-            this.scrollerNode || this.getDOMNode().firstChild.firstChild;
+            this.scrollerNode ||
+                this.refScroller.current ||
+                this.getDOMNode().firstChild.firstChild;
         return this.scrollerNode;
     }
     getScrollerChild() {
@@ -653,19 +668,53 @@ export default class InovuaScrollContainer extends Component {
     hasHorizontalScrollbar() {
         return this.hasScrollbar(HORIZONTAL);
     }
+    computeScrollWithThreshold = (scrollTop, scrollThreshold, scrollMaxDelta) => {
+        const scrollPercent = (threshold) => {
+            threshold = threshold < 0.4 ? 0.4 : threshold;
+            threshold = threshold > 1 ? 1 : threshold;
+            const scrollMax = scrollMaxDelta
+                ? this.scrollTopMax - scrollMaxDelta
+                : this.scrollTopMax;
+            const percent = scrollTop / scrollMax;
+            if (percent >= threshold) {
+                return true;
+            }
+            return false;
+        };
+        if (typeof scrollThreshold === 'number') {
+            return scrollPercent(scrollThreshold);
+        }
+        if (typeof scrollThreshold === 'string') {
+            if (scrollThreshold.match(/^(\d*(\.\d+)?)%$/)) {
+                const threshold = parseFloat(scrollThreshold) / 100;
+                return scrollPercent(threshold);
+            }
+            if (scrollThreshold.match(/^(\d*(\.\d+)?)px$/)) {
+                const scrollMax = scrollMaxDelta
+                    ? this.scrollTopMax - scrollMaxDelta
+                    : this.scrollTopMax;
+                const threshold = parseFloat(scrollThreshold);
+                if (scrollTop >= scrollMax - threshold) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
     onScroll(event) {
         const eventTarget = event.target;
         if (this.props.onScroll) {
             this.props.onScroll(event);
         }
-        if (eventTarget != this.scrollerNode) {
+        const scrollerNode = this.getScrollerNode();
+        if (eventTarget != scrollerNode) {
             return;
         }
         this.onScrollDebounce(eventTarget);
     }
     onScrollDebounce(eventTarget) {
         const { props } = this;
-        const { rafOnScroll, cancelPrevScrollRaf, avoidScrollTopBrowserLayout, scrollMaxDelta, } = props;
+        const { rafOnScroll, cancelPrevScrollRaf, avoidScrollTopBrowserLayout, scrollMaxDelta, scrollThreshold, } = props;
         const rafFn = rafOnScroll ? raf : callFn;
         if (this.scrollRafId && rafOnScroll && cancelPrevScrollRaf) {
             globalObject.cancelAnimationFrame(this.scrollRafId);
@@ -729,11 +778,18 @@ export default class InovuaScrollContainer extends Component {
                 if (props.onContainerScrollVerticalMin && scrollTop == 0) {
                     props.onContainerScrollVerticalMin(0, eventTarget);
                 }
-                if (props.onContainerScrollVerticalMax &&
-                    (scrollMaxDelta
+                if (props.onContainerScrollVerticalMax) {
+                    if (scrollThreshold) {
+                        const reachScrollMax = this.computeScrollWithThreshold(scrollTop, scrollThreshold, scrollMaxDelta);
+                        if (reachScrollMax) {
+                            props.onContainerScrollVerticalMax(scrollTop);
+                        }
+                    }
+                    else if (scrollMaxDelta
                         ? scrollTop >= this.scrollTopMax - scrollMaxDelta
-                        : scrollTop == this.scrollTopMax)) {
-                    props.onContainerScrollVerticalMax(scrollTop);
+                        : scrollTop == this.scrollTopMax) {
+                        props.onContainerScrollVerticalMax(scrollTop);
+                    }
                 }
             }
             let scrollLeftChange = scrollLeft != prevScrollLeft;
@@ -787,7 +843,7 @@ export default class InovuaScrollContainer extends Component {
         }
     }
     applyCSSContainOnScrollUpdate = bool => {
-        const scrollerNode = this.scrollerNode;
+        const scrollerNode = this.getScrollerNode();
         if (scrollerNode) {
             scrollerNode.style.contain = bool ? 'strict' : '';
         }
@@ -835,9 +891,10 @@ export default class InovuaScrollContainer extends Component {
                 result.false = false;
             }
         }
-        const { shouldAllowScrollbars } = this.props;
+        const { shouldAllowScrollbars, showScrollbars } = this.props;
         if (typeof shouldAllowScrollbars == 'function') {
-            const shouldAllow = shouldAllowScrollbars(this.props, getScrollbarWidth());
+            const shouldAllow = showScrollbars ||
+                shouldAllowScrollbars(this.props, getScrollbarWidth());
             if (shouldAllow === false ||
                 (shouldAllow && shouldAllow.horizontal === false)) {
                 result.horizontal = false;
@@ -994,6 +1051,8 @@ const propTypes = {
     viewStyle: PropTypes.shape({}),
     wrapperStyle: PropTypes.shape({}),
     ResizeObserver: PropTypes.func,
+    scrollThreshold: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    showScrollbars: PropTypes.bool,
 };
 InovuaScrollContainer.propTypes = propTypes;
 export { propTypes, cleanProps, smoothScrollTo, scrollPage, getScrollbarWidth, isMobile, };

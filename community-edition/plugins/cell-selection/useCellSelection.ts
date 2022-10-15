@@ -20,11 +20,13 @@ import {
   useState,
   useCallback,
   useRef,
+  useEffect,
 } from 'react';
 import useActiveCell from './useActiveCell';
 import useProperty from '../../hooks/useProperty';
 import clamp from '../../common/clamp';
 import batchUpdate from '../../utils/batchUpdate';
+import usePrevious from '../../hooks/usePrevious';
 
 const getFirstSelectedCell = (
   cellSelection: [number, number][]
@@ -134,6 +136,17 @@ export const useCellSelection = (
     cellSelectionEnabled && props.multiSelect !== false;
 
   const cellMultiSelectionEnabled = cellMultiSelectionEnabledRef.current;
+
+  const prevMultiSelectionEnabled = usePrevious(
+    cellMultiSelectionEnabled,
+    cellMultiSelectionEnabled
+  );
+
+  useEffect(() => {
+    if (prevMultiSelectionEnabled && !cellMultiSelectionEnabled) {
+      setCellSelection({});
+    }
+  }, [cellMultiSelectionEnabled, prevMultiSelectionEnabled]);
 
   const onCellEnter = useMemo(
     () =>
@@ -383,7 +396,7 @@ export const useCellSelection = (
       return onCellSelectionDraggerMouseDown;
     }
     return null;
-  }, []);
+  }, [cellMultiSelectionEnabled]);
 
   return {
     onCellEnter,

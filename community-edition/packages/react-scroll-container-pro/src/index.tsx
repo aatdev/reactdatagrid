@@ -4,7 +4,12 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React, { Component, createElement, HTMLAttributes } from 'react';
+import React, {
+  Component,
+  createElement,
+  createRef,
+  HTMLAttributes,
+} from 'react';
 import PropTypes from 'prop-types';
 
 import debounce from '../../../packages/debounce';
@@ -66,6 +71,7 @@ type ScrollContainerProps = {
   viewClassName?: string;
   tagName?: string;
   scrollThumbStyle?: ElementCSSInlineStyle;
+  showScrollbars?: boolean;
 } & HTMLAttributes<HTMLElement>;
 
 export default class InovuaScrollContainer extends Component<
@@ -73,6 +79,8 @@ export default class InovuaScrollContainer extends Component<
 > {
   scrollerScrollSize: { width?: number; height?: number };
   scrollerClientSize: { width?: number; height?: number };
+  refScroller?: any;
+  scrollerNode?: any;
 
   constructor(props: ScrollContainerProps) {
     super(props);
@@ -152,16 +160,19 @@ export default class InovuaScrollContainer extends Component<
     this.refView = v => {
       this.viewNode = v;
     };
-    this.refScroller = c => {
-      if (props.usePassiveScroll) {
-        if (c) {
-          this.setupPassiveScrollListener(c);
-        } else {
-          this.removePassiveScrollListener(this.scrollerNode);
-        }
-      }
-      this.scrollerNode = c;
-    };
+
+    this.refScroller = createRef();
+
+    // this.refScroller = c => {
+    //   if (props.usePassiveScroll) {
+    //     if (c) {
+    //       this.setupPassiveScrollListener(c);
+    //     } else {
+    //       this.removePassiveScrollListener(this.scrollerNode);
+    //     }
+    //   }
+    //   this.scrollerNode = c;
+    // };
   }
 
   // ADJUST WRAPPER ON SCROLL INTO VIEW!!!
@@ -208,7 +219,7 @@ export default class InovuaScrollContainer extends Component<
     });
   }
 
-  removePassiveScrollListener(node = this.scrollerNode) {
+  removePassiveScrollListener(node = this.getScrollerNode()) {
     if (node) {
       node.removeEventListener('scroll', this.onScroll, {
         passive: true,
@@ -218,11 +229,30 @@ export default class InovuaScrollContainer extends Component<
 
   componentWillUnmount() {
     this.unmounted = true;
+
     if (this.props.usePassiveScroll) {
       this.removePassiveScrollListener();
     }
     if (typeof this.props.onWillUnmount === 'function') {
       this.props.onWillUnmount(this);
+    }
+  }
+
+  componentDidMount() {
+    this.unmounted = false;
+
+    this.scrollerNode = this.refScroller.current;
+    const scrollerNode = this.getScrollerNode();
+    if (this.props.usePassiveScroll) {
+      if (scrollerNode) {
+        this.setupPassiveScrollListener(scrollerNode);
+      } else {
+        this.removePassiveScrollListener(scrollerNode);
+      }
+    }
+
+    if (typeof this.props.onDidMount === 'function') {
+      this.props.onDidMount(this, this.getDOMNode(), this._scrollerResizer);
     }
   }
 
@@ -529,12 +559,6 @@ export default class InovuaScrollContainer extends Component<
     }
   }
 
-  componentDidMount() {
-    if (typeof this.props.onDidMount === 'function') {
-      this.props.onDidMount(this, this.getDOMNode(), this._scrollerResizer);
-    }
-  }
-
   getDOMNode() {
     return this.domNode;
   }
@@ -575,6 +599,7 @@ export default class InovuaScrollContainer extends Component<
 
   renderScrollbars() {
     const { scrollbars } = this.state;
+
     return [
       scrollbars.vertical && this.renderScrollbar('vertical', scrollbars),
       scrollbars.horizontal && this.renderScrollbar('horizontal', scrollbars),
@@ -744,7 +769,9 @@ export default class InovuaScrollContainer extends Component<
 
   getScrollerNode() {
     this.scrollerNode =
-      this.scrollerNode || this.getDOMNode().firstChild.firstChild;
+      this.scrollerNode ||
+      this.refScroller.current ||
+      this.getDOMNode().firstChild.firstChild;
 
     return this.scrollerNode;
   }
@@ -878,13 +905,58 @@ export default class InovuaScrollContainer extends Component<
     return this.hasScrollbar(HORIZONTAL);
   }
 
+  computeScrollWithThreshold = (
+    scrollTop: number,
+    scrollThreshold: number | string,
+    scrollMaxDelta: number
+  ): boolean => {
+    const scrollPercent = (threshold: number): boolean => {
+      threshold = threshold < 0.4 ? 0.4 : threshold;
+      threshold = threshold > 1 ? 1 : threshold;
+
+      const scrollMax = scrollMaxDelta
+        ? this.scrollTopMax - scrollMaxDelta
+        : this.scrollTopMax;
+      const percent = scrollTop / scrollMax;
+      if (percent >= threshold) {
+        return true;
+      }
+      return false;
+    };
+
+    if (typeof scrollThreshold === 'number') {
+      return scrollPercent(scrollThreshold);
+    }
+
+    if (typeof scrollThreshold === 'string') {
+      if (scrollThreshold.match(/^(\d*(\.\d+)?)%$/)) {
+        const threshold = parseFloat(scrollThreshold) / 100;
+        return scrollPercent(threshold);
+      }
+
+      if (scrollThreshold.match(/^(\d*(\.\d+)?)px$/)) {
+        const scrollMax = scrollMaxDelta
+          ? this.scrollTopMax - scrollMaxDelta
+          : this.scrollTopMax;
+
+        const threshold = parseFloat(scrollThreshold);
+        if (scrollTop >= scrollMax - threshold) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  };
+
   onScroll(event) {
     const eventTarget = event.target;
 
     if (this.props.onScroll) {
       this.props.onScroll(event);
     }
-    if (eventTarget != this.scrollerNode) {
+    const scrollerNode = this.getScrollerNode();
+    if (eventTarget != scrollerNode) {
       return;
     }
 
@@ -898,6 +970,7 @@ export default class InovuaScrollContainer extends Component<
       cancelPrevScrollRaf,
       avoidScrollTopBrowserLayout,
       scrollMaxDelta,
+      scrollThreshold,
     } = props;
 
     const rafFn = rafOnScroll ? raf : callFn;
@@ -990,13 +1063,23 @@ export default class InovuaScrollContainer extends Component<
         if (props.onContainerScrollVerticalMin && scrollTop == 0) {
           props.onContainerScrollVerticalMin(0, eventTarget);
         }
-        if (
-          props.onContainerScrollVerticalMax &&
-          (scrollMaxDelta
-            ? scrollTop >= this.scrollTopMax - scrollMaxDelta
-            : scrollTop == this.scrollTopMax)
-        ) {
-          props.onContainerScrollVerticalMax(scrollTop);
+        if (props.onContainerScrollVerticalMax) {
+          if (scrollThreshold) {
+            const reachScrollMax: boolean = this.computeScrollWithThreshold(
+              scrollTop,
+              scrollThreshold,
+              scrollMaxDelta
+            );
+            if (reachScrollMax) {
+              props.onContainerScrollVerticalMax(scrollTop);
+            }
+          } else if (
+            scrollMaxDelta
+              ? scrollTop >= this.scrollTopMax - scrollMaxDelta
+              : scrollTop == this.scrollTopMax
+          ) {
+            props.onContainerScrollVerticalMax(scrollTop);
+          }
         }
       }
 
@@ -1074,7 +1157,7 @@ export default class InovuaScrollContainer extends Component<
   }
 
   applyCSSContainOnScrollUpdate = bool => {
-    const scrollerNode = this.scrollerNode;
+    const scrollerNode = this.getScrollerNode();
 
     if (scrollerNode) {
       scrollerNode.style.contain = bool ? 'strict' : '';
@@ -1136,13 +1219,12 @@ export default class InovuaScrollContainer extends Component<
       }
     }
 
-    const { shouldAllowScrollbars } = this.props;
+    const { shouldAllowScrollbars, showScrollbars } = this.props;
 
     if (typeof shouldAllowScrollbars == 'function') {
-      const shouldAllow = shouldAllowScrollbars(
-        this.props,
-        getScrollbarWidth()
-      );
+      const shouldAllow =
+        showScrollbars ||
+        shouldAllowScrollbars(this.props, getScrollbarWidth());
 
       if (
         shouldAllow === false ||
@@ -1320,6 +1402,8 @@ const propTypes = {
   viewStyle: PropTypes.shape({}),
   wrapperStyle: PropTypes.shape({}),
   ResizeObserver: PropTypes.func,
+  scrollThreshold: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  showScrollbars: PropTypes.bool,
 };
 
 InovuaScrollContainer.propTypes = propTypes;

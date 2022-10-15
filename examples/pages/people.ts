@@ -5,13 +5,27 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export default [
+export type PeopleType = {
+  id: number | string;
+  firstName: string;
+  name: string;
+  student: boolean;
+  age: number;
+  city: string;
+  country: string;
+  email: string;
+  birthDate: string;
+};
+
+export type People = PeopleType[];
+
+const people = [
   {
     id: 0,
     firstName: 'Bill',
     name: 'Bill',
     student: true,
-    age: 47,
+    age: 20,
     city: 'Manchester',
     country: 'uk',
     email: 'bill@manchester.uk',
@@ -34,7 +48,7 @@ export default [
     name: 'John',
     age: 32,
     student: false,
-    city: 'The Great City Of London',
+    city: 'London',
     country: 'uk',
     email: 'john@London.com',
     birthDate: '1970-12-01T00:00:00Z',
@@ -53,7 +67,7 @@ export default [
   {
     id: 4,
     firstName: 'Billy',
-    name: 'Billy from Edmonton',
+    name: 'Billy',
     age: 32,
     student: false,
     city: 'Edmonton',
@@ -109,10 +123,10 @@ export default [
     id: 9,
     firstName: 'David',
     name: 'David',
-    age: 47,
+    age: 48,
     student: false,
     city: 'Toronto',
-    country: 'uk',
+    country: 'ca',
     email: 'david@toronto.com',
     birthDate: '1979-12-08T00:00:00Z',
   },
@@ -120,10 +134,10 @@ export default [
     id: 10,
     firstName: 'Richard',
     name: 'Richard',
-    age: 47,
+    age: 9,
     student: false,
     city: 'Ottawa',
-    country: 'uk',
+    country: 'ca',
     email: 'richard@ottawa.ca',
     birthDate: '2000-12-09T00:00:00Z',
   },
@@ -151,3 +165,5 @@ export default [
     birthDate: '1981-12-11T00:00:00Z',
   },
 ];
+
+export default people;

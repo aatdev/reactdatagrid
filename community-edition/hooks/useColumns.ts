@@ -478,9 +478,12 @@ export default (
       return;
     }
 
-    const { setLockedColumnsState, lockedColumnsState } = computedProps;
+    const { setLockedColumnsState } = computedProps;
 
-    setLockedColumnsState({ ...lockedColumnsState, [column.id]: locked });
+    setLockedColumnsState(lockedColumnsState => ({
+      ...lockedColumnsState,
+      [column.id]: locked,
+    }));
   };
 
   const getColumnsInOrder = (): TypeComputedColumn[] => {
@@ -494,7 +497,7 @@ export default (
 
     if (!computedColumnOrder || !computedColumnOrder.length) {
       return computedProps.initialProps.columns.map(
-        cId => computedProps.getColumnBy(cId) as TypeComputedColumn
+        (cId: any) => computedProps.getColumnBy(cId) as TypeComputedColumn
       );
     }
     return computedColumnOrder.map(

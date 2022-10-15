@@ -5,6 +5,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { TypeColumn } from '.';
+
 export type TypeSingleFilterValue = {
   name: string;
   type: string;
@@ -13,10 +15,27 @@ export type TypeSingleFilterValue = {
   emptyValue?: any;
   fn?: (arg: any) => any;
   getFilterValue?: Function;
+  active?: boolean;
+};
+
+export type TypeFilterParam = {
+  column?: TypeColumn;
+  data?: any;
+  emptyValue?: string;
+  filterValue?: string | number;
+  value?: string | number;
 };
 
 export type TypeFilterValue = TypeSingleFilterValue[] | null;
 export default TypeFilterValue;
+
+export type TypeFnParam = {
+  value: any;
+  filterValue?: any;
+  emptyValue?: string;
+  data?: any[];
+  column?: any;
+};
 
 export type TypeFilterOperator = {
   name: string;
@@ -25,12 +44,8 @@ export type TypeFilterOperator = {
     filterValue,
     data,
     emptyValue,
-  }: {
-    value: any;
-    filterValue: any;
-    data: any;
-    emptyValue: any;
-  }) => boolean;
+    column,
+  }: TypeFnParam) => boolean;
   filterOnEmptyValue?: boolean;
   valueOnOperatorSelect?: any;
   disableFilterEditor?: boolean;
@@ -45,3 +60,10 @@ export type TypeFilterType = {
 export type TypeFilterTypes = {
   [key: string]: TypeFilterType;
 };
+
+export type TypeFilter = (
+  data: any[],
+  filterValueArray: TypeSingleFilterValue[],
+  filterTypes?: TypeFilterTypes,
+  columnsMap?: { [key: string]: TypeColumn }
+) => any[] | ((item: any) => boolean);

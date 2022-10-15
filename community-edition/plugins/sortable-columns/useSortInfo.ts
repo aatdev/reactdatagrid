@@ -52,7 +52,7 @@ const getNextSortInfoForColumn = (
   }
 
   if (sortFn) {
-    newSortInfo.fn = (one, two) => sortFn!(one, two, column);
+    newSortInfo.fn = (one: any, two: any) => sortFn!(one, two, column);
   }
 
   if (forceDir !== undefined) {
@@ -244,7 +244,8 @@ const useSortInfo = (
         | string
         | number
         | { id: string | number; name?: string | number }
-        | { name: string | number; id?: string | number }
+        | { name: string | number; id?: string | number },
+      defaultSortingDirection: 'asc' | 'desc'
     ): void => {
       const computedProps = computedPropsRef.current;
       if (!computedProps) {
@@ -264,6 +265,14 @@ const useSortInfo = (
           ? null
           : computedProps.computedSortInfo;
 
+      const sortingDirection =
+        defaultSortingDirection !== undefined
+          ? defaultSortingDirection
+          : computedProps.defaultSortingDirection !== undefined
+          ? computedProps.defaultSortingDirection === 'asc'
+            ? 1
+            : -1
+          : undefined;
       const computedIsMultiSort = computedProps.computedIsMultiSort;
       const nextSortInfo = computedIsMultiSort
         ? getNextMultipleSortInfo(computedColumn, sortInfo, {
@@ -273,6 +282,7 @@ const useSortInfo = (
         : getNextSingleSortInfo(computedColumn, sortInfo, {
             allowUnsort,
             multiSort: false,
+            forceDir: sortingDirection,
             sortFunctions: computedProps.sortFunctions,
           });
       setSortInfo(nextSortInfo);

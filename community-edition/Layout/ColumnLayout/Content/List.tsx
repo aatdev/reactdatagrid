@@ -5,7 +5,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import React, { Component } from 'react';
+import React, { Component, createRef, RefObject } from 'react';
 import PropTypes from 'prop-types';
 
 import assignDefined from '../../../packages/assign-defined';
@@ -51,12 +51,14 @@ type ListProps = {
 export default class InovuaDataGridList extends Component<ListProps> {
   scrollingDirection?: 'horizontal' | 'vertical' | 'none';
   lastScrollTimestamp: number = 0;
+  scrollLeft: any;
+  virtualListRef: any;
+
   constructor(props) {
     super(props);
 
-    this.refVirtualList = vl => {
-      this.virtualList = vl;
-    };
+    this.virtualListRef = createRef();
+
     this._scrollLeft = 0;
     this._scrollTop = 0;
 
@@ -67,6 +69,7 @@ export default class InovuaDataGridList extends Component<ListProps> {
 
     this.rows = [];
     this.scrollbars = {};
+    this.scrollLeft = createRef();
   }
 
   shouldComponentUpdate(nextProps, nextState) {
@@ -82,12 +85,16 @@ export default class InovuaDataGridList extends Component<ListProps> {
     return !equal(nextState, this.state);
   }
 
+  componentDidMount() {
+    this.__willUnmount = false;
+  }
+
   componentWillUnmount() {
     this.__willUnmount = true;
   }
 
   isRowFullyVisible = index => {
-    return this.virtualList.isRowVisible(index);
+    return this.getVirtualList().isRowVisible(index);
   };
 
   computeRows = (
@@ -124,9 +131,16 @@ export default class InovuaDataGridList extends Component<ListProps> {
         editRowIndex: this.editRowIndex,
         editColumnIndex: this.editColumnIndex,
         editColumnId: this.editColumnId,
+        memorizedScrollLeft: this.scrollLeft.current,
       },
       props
     );
+  };
+
+  getVirtualList = () => {
+    const vl = this.virtualListRef.current;
+
+    return vl;
   };
 
   tryRowEdit = (nextEditRowIndex, dir, columnIndex, isEnterNavigation) => {
@@ -227,12 +241,14 @@ export default class InovuaDataGridList extends Component<ListProps> {
       // we do some short-circuiting around the virtual list
       // so only the rendeRow for the specific row gets called
       // so only the editing row is being re-rendered by the update
-      this.virtualList.getRows().forEach(r => {
-        const row = r.getInstance();
-        if (row && row.props.rowIndex === rowIndex) {
-          r.update();
-        }
-      });
+      this.getVirtualList()
+        .getRows()
+        .forEach(r => {
+          const row = r.getInstance();
+          if (row && row.props.rowIndex === rowIndex) {
+            r.update();
+          }
+        });
       return;
     }
 
@@ -240,6 +256,7 @@ export default class InovuaDataGridList extends Component<ListProps> {
   };
 
   onScrollHorizontal = (scrollLeft, _, __, scrollLeftMax) => {
+    this.scrollLeft.current = scrollLeft;
     this.onContainerScrollHorizontal(scrollLeft, undefined, scrollLeftMax);
   };
 
@@ -339,7 +356,7 @@ export default class InovuaDataGridList extends Component<ListProps> {
         useTransformRowPosition={this.props.useTransformRowPosition}
         useTransformPosition={this.props.useTransformPosition}
         shouldComponentUpdate={shouldUpdate}
-        ref={this.refVirtualList}
+        ref={this.virtualListRef}
         count={thisProps.data.length || 0}
         pureRows={pureRows}
         renderRow={renderRow}
@@ -656,7 +673,7 @@ export default class InovuaDataGridList extends Component<ListProps> {
     if (columnRenderStartIndex === this.columnRenderStartIndex && !force) {
       return;
     }
-    if (!this.virtualList) {
+    if (!this.getVirtualList()) {
       return;
     }
 
@@ -665,7 +682,7 @@ export default class InovuaDataGridList extends Component<ListProps> {
     }
     this.columnRenderStartIndex = columnRenderStartIndex;
 
-    const rows = this.virtualList.getRows();
+    const rows = this.getVirtualList().getRows();
 
     rows.forEach(row => {
       const rowInstance = row.getInstance();
@@ -678,14 +695,15 @@ export default class InovuaDataGridList extends Component<ListProps> {
   };
 
   getRows = () => {
-    if (!this.virtualList) {
+    const virtualList = this.getVirtualList();
+    if (!virtualList) {
       return [];
     }
-    return this.virtualList.getRows().map(row => row.getInstance());
+    return virtualList.getRows().map(row => row.getInstance());
   };
 
   getScrollLeftMax() {
-    return this.virtualList ? this.virtualList.scrollLeftMax : 0;
+    return this.getVirtualList() ? this.getVirtualList().scrollLeftMax : 0;
   }
 
   onScrollbarsChange = scrollbars => {
@@ -699,7 +717,9 @@ export default class InovuaDataGridList extends Component<ListProps> {
     }
 
     if (this.props.onScrollbarsChange) {
-      this.props.onScrollbarsChange(scrollbars);
+      raf(() => {
+        this.props.onScrollbarsChange(scrollbars);
+      });
     }
     if (this.props.scrollProps && this.props.scrollProps.onScrollbarsChange) {
       this.props.scrollProps.onScrollbarsChange(scrollbars);
@@ -730,6 +750,7 @@ export default class InovuaDataGridList extends Component<ListProps> {
       // protect against SAFARI inertial scroling reporting negative values when bouncing
       scrollLeft = 0;
     }
+
     scrollLeft = Math.round(scrollLeft);
     this._scrollLeft = scrollLeft;
 
@@ -792,7 +813,7 @@ export default class InovuaDataGridList extends Component<ListProps> {
   };
 
   getDOMNode = () => {
-    return this.node || (this.node = this.virtualList.getDOMNode());
+    return this.node || (this.node = this.getVirtualList().getDOMNode());
   };
 
   renderRow = args => {
@@ -815,7 +836,7 @@ export default class InovuaDataGridList extends Component<ListProps> {
   };
 
   getVisibleCount = () => {
-    return this.virtualList ? this.virtualList.getVisibleCount() : -1;
+    return this.getVirtualList() ? this.getVirtualList().getVisibleCount() : -1;
   };
 }
 
@@ -829,7 +850,7 @@ const propTypes = Object.assign({}, virtualListPropTypes, {
       render: PropTypes.func,
     })
   ),
-  data: PropTypes.array,
+  data: PropTypes.any,
   from: PropTypes.number,
   updateLockedWrapperPositions: PropTypes.any,
   // true if there is at least one locked column, false otherwise

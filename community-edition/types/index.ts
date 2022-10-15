@@ -17,17 +17,25 @@ import {
   TypeColumns,
   TypeHeaderProps,
 } from './TypeColumn';
-import { MutableRefObject, ReactNode, CSSProperties } from 'react';
+import {
+  MutableRefObject,
+  ReactNode,
+  CSSProperties,
+  ReactElement,
+} from 'react';
 export { TypeSortInfo, TypeSingleSortInfo } from './TypeSortInfo';
-export { TypeGroupBy } from './TypeGroupBy';
+export { TypeGroupBy, TypeGroupTool } from './TypeGroupBy';
 export { TypeSize } from './TypeSize';
 export { TypeDataSource } from './TypeDataSource';
 export {
+  TypeFilter,
   TypeFilterValue,
   TypeSingleFilterValue,
   TypeFilterType,
   TypeFilterTypes,
+  TypeFnParam,
   TypeFilterOperator,
+  TypeFilterParam,
 } from './TypeFilterValue';
 export {
   TypeDataGridProps,
@@ -461,6 +469,27 @@ export type TypePlugin = {
     columns: TypeColumns,
     props: TypeBuildColumnsProps
   ) => TypeColumns;
+  renderColumnContextMenu?: (
+    computedProps: TypeComputedProps,
+    computedPropsRef: MutableRefObject<TypeComputedProps | null>
+  ) => void | {} | null;
+  renderRowContextMenu?: (
+    computedProps: TypeComputedProps,
+    computedPropsRef: MutableRefObject<TypeComputedProps | null>
+  ) => void | {} | null;
+  renderColumnFilterContextMenu?: (
+    computedProps: TypeComputedProps,
+    computedPropsRef: MutableRefObject<TypeComputedProps | null>
+  ) => void | {} | null;
+  renderRowResizeIndicator?: (
+    computedProps: TypeComputedProps,
+    computedPropsRef: MutableRefObject<TypeComputedProps | null>
+  ) => ReactElement;
+  renderLicenseNotice?: (
+    computedProps: TypeComputedProps,
+    computedPropsRef: MutableRefObject<TypeComputedProps | null>
+  ) => void;
+  Footer?: TypePlugin;
 };
 
 export type TypeDetailsGridInfo = {
@@ -500,6 +529,7 @@ export type TypeDiff = {
 export type TypeConfig = {
   diff: TypeDiff;
   didDrag: boolean;
+  scope?: any;
 };
 
 export type RangeResultType = {

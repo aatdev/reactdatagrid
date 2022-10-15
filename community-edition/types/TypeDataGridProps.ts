@@ -59,6 +59,8 @@ import {
   TypePivotItem,
   TypePivotColumnSummaryReducer,
   TypeExpandedGroups,
+  TypeGroupTool,
+  CellProps,
 } from '.';
 import {
   TypeRowSelection,
@@ -66,6 +68,7 @@ import {
   TypeRowUnselected,
 } from './TypeSelected';
 import Renderable from './TypeRenderable';
+import { FunctionNotifier } from '../utils/notifier';
 
 export type TypeBuildColumnsProps = {
   groups: any;
@@ -152,6 +155,11 @@ export type EnumRowDetailsWidth =
 type TypeGridPublicAPI = any;
 
 type TypeDataGridPropsNoI18n = {
+  activeCellThrottle?: number;
+  activeIndexThrottle?: number;
+  scrollThreshold?: number | string;
+  rowContextMenuAlignPositions?: string[];
+  rowContextMenuPosition?: 'fixed' | 'absolute';
   filteredRowsCount?: (filteredRows: number) => void;
   renderRow?: (rowProps: {
     id?: string | number;
@@ -185,10 +193,10 @@ type TypeDataGridPropsNoI18n = {
     menuProps: any,
     details: {
       rowProps: TypeRowProps;
-      cellProps: TypeCellProps;
+      cellProps?: CellProps;
       grid: TypeGridPublicAPI;
       computedProps: TypeComputedProps;
-      computedPropsRef: MutableRefObject<TypeComputedProps>;
+      computedPropsRef: MutableRefObject<TypeComputedProps | null>;
     }
   ) => any;
   collapseChildrenOnAsyncNodeCollapse: boolean;
@@ -574,7 +582,7 @@ type TypeDataGridPropsNoI18n = {
   theme?: string;
   style?: { [key: string]: string | number };
   scrollTopOnFilter?: boolean;
-  scrollTopOnSort?: boolean;
+  scrollTopOnSort?: boolean | 'always';
   scrollTopOnGroupBy?: boolean;
 
   parentComputedProps?: TypeComputedProps;
@@ -595,6 +603,7 @@ type TypeDataGridPropsNoI18n = {
 
   sortInfo?: TypeSortInfo;
   defaultSortInfo?: TypeSortInfo;
+  defaultSortingDirection?: 'desc' | 'asc';
 
   groupBy?: TypeGroupBy;
   defaultGroupBy?: TypeGroupBy;
@@ -653,7 +662,39 @@ type TypeDataGridPropsNoI18n = {
 
   rowReorderColumn?: IColumn | boolean;
   onRowReorder?: TypeRowReorder;
-  allowRowReoderBetweenGroups?: boolean;
+  onGroupRowReorderStart?: ({
+    data,
+    dragIndex,
+    dragGroup,
+  }: {
+    data: any;
+    dragIndex: number;
+    dragGroup: string;
+  }) => void;
+  onRowReorderStart?: ({
+    data,
+    dragIndex,
+  }: {
+    data: any;
+    dragIndex: number;
+  }) => void;
+  onGroupRowReorderEnd?: ({
+    data,
+    dropIndex,
+    dropGroup,
+  }: {
+    data: any;
+    dropIndex: number;
+    dropGroup: string;
+  }) => void;
+  onRowReorderEnd?: ({
+    data,
+    dropIndex,
+  }: {
+    data: any;
+    dropIndex: number;
+  }) => void;
+  allowRowReorderBetweenGroups?: boolean;
   renderRowReorderProxy?: ({
     data,
     dataSource,
@@ -691,6 +732,8 @@ type TypeDataGridPropsNoI18n = {
   onPasteSelectedCellsChange?: (cells: any) => void;
   onCopyActiveRowChange?: (row: any) => void;
   onPasteActiveRowChange?: (row: any) => void;
+  onCopySelectedRowsChange?: (rows: any[]) => void;
+  onPasteSelectedRowsChange?: (rows: any[]) => void;
   pageSizes?: number[];
   onCellClick?: (event: MouseEvent, cellProps: TypeCellProps) => void;
   onRefresh?: () => void
@@ -705,9 +748,20 @@ type TypeDataGridPropsNoI18n = {
     updatedTreeData: any[];
   }) => void;
   enableColumnAutosize?: boolean;
+  skipHeaderOnAutoSize?: boolean;
+  setColumnsSizesAuto?: ({
+    columnIds,
+    skipHeader,
+    skipSortTool,
+  }: {
+    columnIds?: string[];
+    skipHeader?: boolean;
+    skipSortTool?: boolean;
+  }) => void;
+  setColumnSizesToFit?: () => void;
+  setColumnSizeAuto?: (id: string, skipHeader?: boolean) => void;
   getRows?: () => void;
   getHeader?: () => void;
-  skipHeaderOnAutoSize?: boolean;
   enableColumnHover?: boolean;
   viewportSize?: TypeSize;
   columnHoverClassName?: string;
@@ -716,6 +770,13 @@ type TypeDataGridPropsNoI18n = {
   renderRowDetailsCollapsedIcon?: () => void;
   treeGridChildrenSelectionEnabled?: boolean;
   treeGridChildrenDeselectionEnabled?: boolean;
+  renderGroupCollapseTool?: TypeGroupTool;
+  renderGroupExpandTool?: TypeGroupTool;
+  setColumnContextMenuInstanceProps?: (cellInstance: any) => void;
+  computedIsFilterable?: boolean;
+  onRowContextMenu?: (rowProps: TypeRowProps, event: any) => void;
+  hideRowFilterContextMenu?: () => void;
+  renderGridMenu?: (result: any, computedProps: TypeComputedProps) => void;
 };
 type TypeDataGridComputedClashingProps = {
   i18n?: TypeI18n;
@@ -730,6 +791,9 @@ export type TypePivotUniqueValuesDescriptor = {
 };
 export type TypeComputedProps = TypeDataGridPropsNoI18n & {
   ColumnLayout?: any;
+  disabledRows?: { [key: string]: boolean } | null;
+  copySpreadsheetCompatibleString?: boolean;
+  clipboardSeparator?: string;
   enableColumnFilterContextMenu?: boolean;
   filteredRowsCount?: (filteredRows: number) => number;
   dataCountAfterFilter?: number;
@@ -739,6 +803,7 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
   rowReorderAutoScroll?: boolean;
   rowReorderArrowStyle?: CSSProperties;
   rowReorderAutoScrollSpeed?: number;
+  notifyColumnFilterVisibleStateChange: FunctionNotifier<boolean>;
   computedPivotUniqueValuesPerColumn: TypePivotUniqueValuesDescriptor;
   computedLicenseValid?: boolean;
   initialProps: TypeDataGridProps;
@@ -1068,11 +1133,13 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
     menuAlignTo: any;
     menuConstrainTo: any;
     menuOnHide: (...args: any[]) => void;
+    getMenuConstrainTo?: () => void;
   }>;
   rowContextMenuInfoRef: MutableRefObject<{
     menuAlignTo: any;
     menuConstrainTo: any;
     menuOnHide: (...args: any[]) => void;
+    cellProps?: CellProps;
   }>;
   publicAPI: TypeGridPublicAPI;
   isColumnVisible: (nameOrId: TypeGetColumnByParam) => boolean;
@@ -1340,13 +1407,15 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
   ) => TypeColumns;
   dataPromiseRef: MutableRefObject<Promise<any> | null>;
   hasNextPage: () => boolean;
-  gotoNextPage: () => boolean;
+  gotoNextPage: ({ append }: { append: boolean }) => boolean;
   computedHasColSpan: boolean;
   updateMainMenuPosition?: (alignTo: any) => void;
   isInEdit?: any;
   availableWidth?: number;
   computedEnableColumnHover?: boolean;
   preventBlurOnContextMenuOpen?: MutableRefObject<boolean>;
+  copySelectedRowsToClipboard?: () => void;
+  pasteSelectedRowsFromClipboard?: () => void;
   copySelectedCellsToClipboard?: () => void;
   copyActiveRowToClipboard?: () => void;
   pasteSelectedCellsFromClipboard?: () => void;
@@ -1361,17 +1430,15 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
     dir: number;
   }) => void;
   startEdit?: ({
-    rowIndex,
-    rowId,
     columnId,
-    dir,
+    rowIndex,
     value,
+    rowId,
   }: {
-    rowIndex?: number;
-    rowId?: string;
     columnId: string;
-    dir: number;
-    value: any;
+    rowIndex: number;
+    value?: any;
+    rowId?: string;
   }) => void;
   completeEdit?: ({
     rowId,
