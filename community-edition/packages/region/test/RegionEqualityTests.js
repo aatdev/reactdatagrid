@@ -1,4 +1,3 @@
-"use strict";
 /**
  * Copyright © INOVUA TRADING.
  *

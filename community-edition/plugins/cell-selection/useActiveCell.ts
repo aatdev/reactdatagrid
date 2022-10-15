@@ -17,7 +17,7 @@ import useProperty from '../../hooks/useProperty';
 import clamp from '../../common/clamp';
 import usePrevious from '../..//hooks/usePrevious';
 import batchUpdate from '../../utils/batchUpdate';
-import throttle from '../../packages/trottle';
+import throttle from '../../packages/throttle';
 
 const useActiveCell = (
   props: TypeDataGridProps,
@@ -59,7 +59,7 @@ const useActiveCell = (
       if (!computedProps || !computedProps.computedCellNavigationEnabled) {
         return;
       }
-      const { computedActiveCell, data, visibleColumns } = computedProps;
+      const { computedActiveCell, data, visibleColumns } = computedProps as any;
 
       const shouldCommit = !queue;
       queue = queue || batchUpdate();
@@ -199,8 +199,8 @@ const useActiveCell = (
       if (!computedProps) {
         return -1;
       }
-      let rowKey: number;
-      let colKey: number;
+      let rowKey: number = 0;
+      let colKey: number = 0;
       if (typeof cellProps === 'string') {
         return cellProps;
       }

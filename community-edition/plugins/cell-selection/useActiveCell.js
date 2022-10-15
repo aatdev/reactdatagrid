@@ -9,6 +9,7 @@ import useProperty from '../../hooks/useProperty';
 import clamp from '../../common/clamp';
 import usePrevious from '../..//hooks/usePrevious';
 import batchUpdate from '../../utils/batchUpdate';
+import throttle from '../../packages/throttle';
 const useActiveCell = (props, computedPropsRef) => {
     let [computedActiveCell, doSetActiveCell] = useProperty(props, 'activeCell');
     if (!props.enableKeyboardNavigation) {
@@ -111,8 +112,8 @@ const useActiveCell = (props, computedPropsRef) => {
         if (!computedProps) {
             return -1;
         }
-        let rowKey;
-        let colKey;
+        let rowKey = 0;
+        let colKey = 0;
         if (typeof cellProps === 'string') {
             return cellProps;
         }
@@ -187,7 +188,15 @@ const useActiveCell = (props, computedPropsRef) => {
         }
         rowIndex = clamp(rowIndex, 0, maxRow);
         colIndex = clamp(colIndex, minCol, maxCol);
-        computedProps.setActiveCell([rowIndex, colIndex]);
+        if (computedProps.activeCellThrottle) {
+            throttle(() => computedProps.setActiveCell([rowIndex, colIndex]), computedProps.activeCellThrottle, {
+                trailing: true,
+                leading: false,
+            });
+        }
+        else {
+            computedProps.setActiveCell([rowIndex, colIndex]);
+        }
     }, []);
     return {
         getCellSelectionBetween,
