@@ -8,7 +8,7 @@ import useProperty from './useProperty';
 import { useCallback, useEffect, useRef } from 'react';
 import clamp from '../utils/clamp';
 import usePrevious from './usePrevious';
-import throttle from '@inovua/reactdatagrid-community/packages/throttle';
+import throttle from '../packages/throttle';
 import { getGlobal } from '../getGlobal';
 const globalObject = getGlobal();
 const useActiveIndex = (props, computedProps, computedPropsRef) => {
