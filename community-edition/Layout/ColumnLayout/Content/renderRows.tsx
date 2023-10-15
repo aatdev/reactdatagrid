@@ -9,6 +9,7 @@ import React from 'react';
 import Row from './Row';
 
 import getRowSpans from './getRowSpans';
+import { RowProps } from './RowProps';
 
 const emptyObject = Object.freeze ? Object.freeze({}) : {};
 
@@ -75,8 +76,6 @@ const renderRows = (
     // should have the following props:
     // index - the index of the column group
     // count - how many column groups there are
-    columnGroupCount,
-    columnGroupIndex,
     columnUserSelect,
     selectAll,
     deselectAll,
@@ -104,9 +103,10 @@ const renderRows = (
     onRowMouseEnter,
     onRowMouseLeave,
     computedOnRowClick,
+    computedRowDoubleClick,
     onCellClick,
+    computedCellDoubleClick,
     onCellSelectionDraggerMouseDown,
-    onCellMouseDown,
     onCellEnter,
     onColumnMouseEnter,
     onColumnMouseLeave,
@@ -133,7 +133,6 @@ const renderRows = (
     renderGroupCollapseTool,
     renderGroupExpandTool,
     renderTreeLoadingTool,
-    isRowExpanded,
     rowExpandHeight,
     isRowExpandedById,
     computedRenderRowDetails,
@@ -187,6 +186,10 @@ const renderRows = (
     renderRowDetailsCollapsedIcon,
     computedOnRowMouseDown,
     disabledRows,
+    rowFocusClassName,
+    computedCellBulkUpdateMouseDown,
+    computedCellBulkUpdateMouseUp,
+    bulkUpdateMouseDown,
   }: any
 ) => {
   const remoteOffset = computedLivePagination ? 0 : computedSkip || 0;
@@ -212,6 +215,7 @@ const renderRows = (
     const realIndex = index + from;
 
     const active = computedActiveIndex === realIndex;
+    const focusedRow = computedActiveIndex === realIndex;
     let indexInGroup = isGrouped ? computedIndexesInGroups[realIndex] : null;
 
     if (empty) {
@@ -361,9 +365,11 @@ const renderRows = (
       onMouseLeave: !empty ? onRowMouseLeave : null,
       onClick: !empty ? computedOnRowClick : null,
       onMouseDown: !empty ? computedOnRowMouseDown : null,
+      onRowDoubleClick: !empty ? computedRowDoubleClick : null,
       scrollToColumn,
       scrollToIndexIfNeeded,
       onCellClick,
+      onCellDoubleClick: computedCellDoubleClick,
       onCellSelectionDraggerMouseDown,
       onCellMouseDown: computedOnCellMouseDown,
       onColumnMouseEnter,
@@ -397,7 +403,12 @@ const renderRows = (
       renderRowDetailsCollapsedIcon,
       memorizedScrollLeft,
       disabledRow: disabledRows ? disabledRows[realIndex] : null,
-    };
+      focusedRow,
+      rowFocusClassName,
+      onCellBulkUpdateMouseDown: computedCellBulkUpdateMouseDown,
+      onMouseUp: computedCellBulkUpdateMouseUp,
+      bulkUpdateMouseDown,
+    } as RowProps;
 
     if (rowProps.rowIndex === editRowIndex) {
       rowProps.editing = true;
@@ -438,7 +449,7 @@ const renderRows = (
       rowProps.onGroupToggle = onGroupToggle;
       rowProps.groupSummary = rowData.groupSummary;
       rowProps.groupColumnSummaries = rowData.groupColumnSummaries;
-      rowProps.selected = false;
+      // rowProps.selected = false;
     }
 
     if (isGrouped) {

@@ -17,10 +17,7 @@ import React, {
 import PropTypes from 'prop-types';
 
 import cleanProps from '../../../packages/react-clean-props';
-import {
-  // shallowequal,
-  equalReturnKey,
-} from '../../../packages/shallowequal';
+import shallowequal, { equalReturnKey } from '../../../packages/shallowequal';
 
 import join from '../../../packages/join';
 import clamp from '../../../utils/clamp';
@@ -29,7 +26,7 @@ import Cell from '../Cell';
 import renderCellsMaybeLocked from './renderCellsMaybeLocked';
 import adjustCellProps from './adjustCellProps';
 import { CellProps, CellInstance } from '../Cell/CellProps';
-import { TypeComputedColumn } from '../../../types';
+import { TypeComputedColumn, TypeDataSource } from '../../../types';
 
 import { RowProps, EnhancedRowProps } from './RowProps';
 import usePrevious from '../../../hooks/usePrevious';
@@ -536,6 +533,15 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
   const propsRef = useRef(props);
   propsRef.current = props;
 
+  const lastDataSource = usePrevious<TypeDataSource>(
+    propsRef.current.dataSourceArray,
+    propsRef.current.dataSourceArray
+  );
+  const lastColumns = usePrevious<TypeDataSource>(
+    propsRef.current.columns,
+    propsRef.current.columns
+  );
+
   const getPropsForCells = (
     startIndex?: number,
     endIndex?: number
@@ -624,7 +630,17 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
       renderRowDetailsExpandIcon,
       renderRowDetailsCollapsedIcon,
       disabledRow,
+      onCellDoubleClick,
+      onCellBulkUpdateMouseDown,
+      onCellBulkUpdateMouseUp,
+      bulkUpdateMouseDown,
     } = props;
+
+    const dataSourceChange = !shallowequal(
+      lastDataSource,
+      props.dataSourceArray
+    );
+    const columnsChange = !shallowequal(lastColumns, props.columns);
 
     const expandColumnId: string | undefined = expandColumnFn
       ? expandColumnFn({ data })
@@ -663,8 +679,8 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
 
     let maxRowspanVar = 1;
 
-    const cellPropsArray = columns.map((column, xindex) => {
-      let theColumnIndex = xindex + startIndex!;
+    const cellPropsArray = columns.map((column, idx) => {
+      let theColumnIndex = idx + startIndex!;
       const columnProps: any = column;
 
       const { name, computedVisibleIndex } = columnProps;
@@ -809,6 +825,12 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
         renderRowDetailsExpandIcon,
         renderRowDetailsCollapsedIcon,
         disabledRow,
+        dataSourceChange,
+        columnsChange,
+        onDoubleClick: onCellDoubleClick,
+        onCellBulkUpdateMouseDown,
+        onCellBulkUpdateMouseUp,
+        bulkUpdateMouseDown,
       };
 
       if (computedCellSelection && getCellSelectionKey) {
@@ -1646,6 +1668,15 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
     ]
   );
 
+  const onDoubleClick = useCallback(
+    (event: MouseEvent) => {
+      if (props.onRowDoubleClick) {
+        props.onRowDoubleClick(event, props);
+      }
+    },
+    [props.onRowDoubleClick]
+  );
+
   const onMouseDown = useCallback(
     (event: MouseEvent) => {
       if (props.onMouseDown) {
@@ -1654,6 +1685,12 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
     },
     [props.onMouseDown]
   );
+
+  const onMouseUp = useCallback((event: MouseEvent) => {
+    if (props.onMouseUp) {
+      props.onMouseUp(event);
+    }
+  }, []);
 
   useImperativeHandle(ref, () => {
     return {
@@ -1696,6 +1733,7 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
       onClick,
       onMouseDown,
       getCurrentGaps,
+      totalDataCount: props.totalDataCount,
       rowProps,
       domRef: domRef,
       props,
@@ -1750,6 +1788,8 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
     showHorizontalCellBorders,
     disabledRow,
     rowspanZIndex,
+    focusedRow,
+    rowFocusClassName,
   } = props;
 
   let { rowClassName } = props;
@@ -1805,7 +1845,13 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
     indexInGroup == 0 && `${CLASS_NAME}--first-in-group`,
     lastInGroup && `${CLASS_NAME}--last-in-group`,
     // hasRowSpan ? `${CLASS_NAME}--has-rowspan` : '',
-    disabledRow ? `${CLASS_NAME}--disabled` : ''
+    disabledRow ? `${CLASS_NAME}--disabled` : '',
+    focusedRow
+      ? join(
+          `${CLASS_NAME}--focused`,
+          rowFocusClassName ? rowFocusClassName : ''
+        )
+      : ''
   );
 
   if (passedProps) {
@@ -1861,8 +1907,10 @@ const DataGridRow = React.forwardRef((props: RowProps, ref: any) => {
     // passedProps should not overwrite the following methods
     // onEvent prop will be called also
     onClick: !disabledRow ? onClick : null,
+    onDoubleClick: !disabledRow ? onDoubleClick : null,
     // onMouseDown: onMouseDown,
     onContextMenu: !disabledRow ? onContextMenu : null,
+    onMouseUp: !disabledRow ? onMouseUp : null,
   };
 
   rowProps.children = [
@@ -2148,6 +2196,8 @@ DataGridRow.propTypes = {
   onArrowDown: PropTypes.func,
   onArrowUp: PropTypes.func,
   onCellClick: PropTypes.func,
+  onCellDoubleClick: PropTypes.func,
+  onRowDoubleClick: PropTypes.func,
   onCellEnter: PropTypes.func,
   onCellMouseDown: PropTypes.func,
   onCellSelectionDraggerMouseDown: PropTypes.func,
@@ -2279,6 +2329,14 @@ DataGridRow.propTypes = {
   renderGroupExpandTool: PropTypes.func,
   disabledRow: PropTypes.bool,
   rowspanZIndex: PropTypes.number,
+  onRowFocus: PropTypes.func,
+  onRowBlur: PropTypes.func,
+  onRowKeyDown: PropTypes.func,
+  focusedRow: PropTypes.bool,
+  rowFocusClassName: PropTypes.string,
+  onCellBulkUpdateMouseDown: PropTypes.func,
+  onCellBulkUpdateMouseUp: PropTypes.func,
+  bulkUpdateMouseDown: PropTypes.bool,
 } as any;
 
 export default React.memo(

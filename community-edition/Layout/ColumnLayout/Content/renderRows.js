@@ -14,11 +14,11 @@ availableWidth, data, onTransitionEnd, columns, computedPivot, groupColumn, acti
 // should have the following props:
 // index - the index of the column group
 // count - how many column groups there are
-columnGroupCount, columnGroupIndex, columnUserSelect, selectAll, deselectAll, expandGroupTitle, expandColumn, computedCellSelection, lastLockedStartIndex, lastLockedEndIndex, lastUnlockedIndex, computedGroupBy, computedIndexesInGroups, edition, computedLicenseValid, computedGroupCounts, rowHeightManager, maxRowHeight, minRowHeight, editStartEvent, getItemId, firstUnlockedIndex, firstLockedStartIndex, firstLockedEndIndex, maxVisibleRows, 
+columnUserSelect, selectAll, deselectAll, expandGroupTitle, expandColumn, computedCellSelection, lastLockedStartIndex, lastLockedEndIndex, lastUnlockedIndex, computedGroupBy, computedIndexesInGroups, edition, computedLicenseValid, computedGroupCounts, rowHeightManager, maxRowHeight, minRowHeight, editStartEvent, getItemId, firstUnlockedIndex, firstLockedStartIndex, firstLockedEndIndex, maxVisibleRows, 
 // row event handlers
-onRowMouseEnter, onRowMouseLeave, computedOnRowClick, onCellClick, onCellSelectionDraggerMouseDown, onCellMouseDown, onCellEnter, onColumnMouseEnter, onColumnMouseLeave, columnIndexHovered, onEditCancel, onEditComplete, computedCellMultiSelectionEnabled, nativeScroll, renderRow, onRenderRow, rowClassName, rowStyle, rowFactory, rowProps: passedProps = emptyObject, rowKey, cellFactory, 
+onRowMouseEnter, onRowMouseLeave, computedOnRowClick, computedRowDoubleClick, onCellClick, computedCellDoubleClick, onCellSelectionDraggerMouseDown, onCellEnter, onColumnMouseEnter, onColumnMouseLeave, columnIndexHovered, onEditCancel, onEditComplete, computedCellMultiSelectionEnabled, nativeScroll, renderRow, onRenderRow, rowClassName, rowStyle, rowFactory, rowProps: passedProps = emptyObject, rowKey, cellFactory, 
 // selected can be an object or an index
-computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeCollapseTool, renderTreeExpandTool, renderGroupCollapseTool, renderGroupExpandTool, renderTreeLoadingTool, isRowExpanded, rowExpandHeight, isRowExpandedById, computedRenderRowDetails, isRowExpandableAt, computedRowExpandEnabled, computedRowMultiSelectionEnabled, computedRowSelectionEnabled, computedActiveIndex, computedSkip, computedShowZebraRows, computedHasColSpan, rowHeight: initialRowHeight, totalColumnCount, totalComputedWidth, totalLockedStartWidth, totalLockedEndWidth, totalUnlockedWidth, currentDataSourceCount, computedShowCellBorders, emptyScrollOffset, showHorizontalCellBorders, showVerticalCellBorders, getScrollLeftMax, shouldRenderCollapsedRowDetails, rowDetailsStyle, minRowWidth, maxWidth, startIndex = 0, groupNestingSize, treeNestingSize, onGroupToggle, computedCollapsedGroups, computedExpandedGroups, groupPathSeparator, renderGroupTitle, renderGroupTool, renderLockedEndGroupTitle, renderUnlockedGroupTitle, virtualizeColumns, computedLivePagination, onRowReorder, onDragRowMouseDown, theme, onContextMenu, setActiveIndex, currentEditCompletePromise, enableColumnAutosize, columnHoverClassName, computedEnableColumnHover, renderRowDetailsExpandIcon, renderRowDetailsCollapsedIcon, computedOnRowMouseDown, disabledRows, }) => {
+computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeCollapseTool, renderTreeExpandTool, renderGroupCollapseTool, renderGroupExpandTool, renderTreeLoadingTool, rowExpandHeight, isRowExpandedById, computedRenderRowDetails, isRowExpandableAt, computedRowExpandEnabled, computedRowMultiSelectionEnabled, computedRowSelectionEnabled, computedActiveIndex, computedSkip, computedShowZebraRows, computedHasColSpan, rowHeight: initialRowHeight, totalColumnCount, totalComputedWidth, totalLockedStartWidth, totalLockedEndWidth, totalUnlockedWidth, currentDataSourceCount, computedShowCellBorders, emptyScrollOffset, showHorizontalCellBorders, showVerticalCellBorders, getScrollLeftMax, shouldRenderCollapsedRowDetails, rowDetailsStyle, minRowWidth, maxWidth, startIndex = 0, groupNestingSize, treeNestingSize, onGroupToggle, computedCollapsedGroups, computedExpandedGroups, groupPathSeparator, renderGroupTitle, renderGroupTool, renderLockedEndGroupTitle, renderUnlockedGroupTitle, virtualizeColumns, computedLivePagination, onRowReorder, onDragRowMouseDown, theme, onContextMenu, setActiveIndex, currentEditCompletePromise, enableColumnAutosize, columnHoverClassName, computedEnableColumnHover, renderRowDetailsExpandIcon, renderRowDetailsCollapsedIcon, computedOnRowMouseDown, disabledRows, rowFocusClassName, computedCellBulkUpdateMouseDown, computedCellBulkUpdateMouseUp, bulkUpdateMouseDown, }) => {
     const remoteOffset = computedLivePagination ? 0 : computedSkip || 0;
     const totalCount = data.length;
     let dataArray = data.slice(from, to);
@@ -36,6 +36,7 @@ computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeColl
         const id = rowData ? getItemId(rowData) : i;
         const realIndex = index + from;
         const active = computedActiveIndex === realIndex;
+        const focusedRow = computedActiveIndex === realIndex;
         let indexInGroup = isGrouped ? computedIndexesInGroups[realIndex] : null;
         if (empty) {
             indexInGroup = realIndex + ((totalCount % 2) - 1);
@@ -176,9 +177,11 @@ computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeColl
             onMouseLeave: !empty ? onRowMouseLeave : null,
             onClick: !empty ? computedOnRowClick : null,
             onMouseDown: !empty ? computedOnRowMouseDown : null,
+            onRowDoubleClick: !empty ? computedRowDoubleClick : null,
             scrollToColumn,
             scrollToIndexIfNeeded,
             onCellClick,
+            onCellDoubleClick: computedCellDoubleClick,
             onCellSelectionDraggerMouseDown,
             onCellMouseDown: computedOnCellMouseDown,
             onColumnMouseEnter,
@@ -212,6 +215,11 @@ computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeColl
             renderRowDetailsCollapsedIcon,
             memorizedScrollLeft,
             disabledRow: disabledRows ? disabledRows[realIndex] : null,
+            focusedRow,
+            rowFocusClassName,
+            onCellBulkUpdateMouseDown: computedCellBulkUpdateMouseDown,
+            onMouseUp: computedCellBulkUpdateMouseUp,
+            bulkUpdateMouseDown,
         };
         if (rowProps.rowIndex === editRowIndex) {
             rowProps.editing = true;
@@ -251,7 +259,7 @@ computedSelected, computedUnselected, treeColumn, renderNodeTool, renderTreeColl
             rowProps.onGroupToggle = onGroupToggle;
             rowProps.groupSummary = rowData.groupSummary;
             rowProps.groupColumnSummaries = rowData.groupColumnSummaries;
-            rowProps.selected = false;
+            // rowProps.selected = false;
         }
         if (isGrouped) {
             rowProps.parentGroupDataArray = [];

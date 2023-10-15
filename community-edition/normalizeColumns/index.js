@@ -25,7 +25,7 @@ const defaultPivotGrandSummaryColumn = {
 const defaultPivotSummaryColumn = defaultPivotGrandSummaryColumn;
 const emptyArray = [];
 const emptyObject = Object.freeze ? Object.freeze({}) : {};
-export default ({ generatedColumnsLength = 0, columns, columnMinWidth, columnMaxWidth, columnDefaultWidth, columnWidth, columnSizes = emptyObject, columnVisibilityMap = emptyObject, columnFlexes = emptyObject, lockedColumnsState = emptyObject, columnOrder, computedPivotUniqueValuesPerColumn, editable, pivot, sortable, filterable, resizable, pivotGrandSummaryColumn, lockable, checkboxColumn, rowIndexColumn, filter, rtl, filterValueMap, sortInfo, showPivotSummaryColumns, availableWidth = 0, onRowReorder, rowReorderColumn, }) => {
+export default ({ generatedColumnsLength = 0, columns, columnMinWidth, columnMaxWidth, columnDefaultWidth, columnWidth, columnSizes = emptyObject, columnVisibilityMap = emptyObject, columnFlexes = emptyObject, lockedColumnsState = emptyObject, columnOrder, computedPivotUniqueValuesPerColumn, editable, pivot, sortable, filterable, resizable, pivotGrandSummaryColumn, lockable, checkboxColumn, rowIndexColumn, filter, rtl, filterValueMap, sortInfo, showPivotSummaryColumns, availableWidth = 0, onRowReorder, rowReorderColumn, groupColumn: computedGroupColumn, }) => {
     if (columnVisibilityMap) {
         columnVisibilityMap = { ...columnVisibilityMap };
     }
@@ -62,6 +62,7 @@ export default ({ generatedColumnsLength = 0, columns, columnMinWidth, columnMax
     };
     let hasLockedStart = false;
     let hasLockedEnd = false;
+    let hasValueSetter = false;
     let rowExpandColumn;
     const setComputedColumnWidthsParam = {
         columnFlexes,
@@ -127,6 +128,9 @@ export default ({ generatedColumnsLength = 0, columns, columnMinWidth, columnMax
         if (col.enableColumnHover != null) {
             col.computedEnableColumnHover = col.enableColumnHover;
             delete col.enableColumnHover;
+        }
+        if (col.setValue) {
+            hasValueSetter = true;
         }
         return col;
     });
@@ -263,18 +267,36 @@ export default ({ generatedColumnsLength = 0, columns, columnMinWidth, columnMax
     }
     if (columnOrder) {
         const groupSpacerColumns = visibleColumns.filter(col => col.groupSpacerColumn);
+        const checkboxColumn = visibleColumns.filter(col => col.checkboxColumn);
         const groupColumns = visibleColumns.filter(col => col.groupColumn && !col.groupSpacerColumn);
-        const ungroupColumns = visibleColumns.filter(col => !col.groupColumn && !col.groupSpacerColumn);
+        const ungroupColumns = visibleColumns.filter(col => {
+            if (computedGroupColumn) {
+                return (!col.groupColumn && !col.groupSpacerColumn && !col.checkboxColumn);
+            }
+            else {
+                return !col.groupColumn && !col.groupSpacerColumn;
+            }
+        });
         visibleColumns = columnOrder
             .map((colId) => {
             return ungroupColumns.find(col => col.id == colId);
         })
             .filter((x) => !!x);
-        visibleColumns = [
-            ...groupSpacerColumns,
-            ...groupColumns,
-            ...visibleColumns,
-        ];
+        if (computedGroupColumn) {
+            visibleColumns = [
+                ...checkboxColumn,
+                ...groupSpacerColumns,
+                ...groupColumns,
+                ...visibleColumns,
+            ];
+        }
+        else {
+            visibleColumns = [
+                ...groupSpacerColumns,
+                ...groupColumns,
+                ...visibleColumns,
+            ];
+        }
     }
     if (typeof filter == 'function') {
         visibleColumns = visibleColumns.filter(filter);
@@ -437,6 +459,7 @@ export default ({ generatedColumnsLength = 0, columns, columnMinWidth, columnMax
         allColumns: normalizedColumns,
         columnsMap,
         visibleColumnsMap,
+        hasValueSetter,
     };
 };
 const getPivotGroupColumnForPath = (columnConfig, { pivot, pivotGrandSummaryColumn, }) => {

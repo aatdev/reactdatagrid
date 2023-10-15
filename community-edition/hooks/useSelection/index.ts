@@ -9,7 +9,7 @@ import {
   Dispatch,
   SetStateAction,
   MutableRefObject,
-  useState,
+  // useState,
   useCallback,
   useEffect,
 } from 'react';
@@ -23,6 +23,7 @@ import {
   TypeBatchUpdateQueue,
   TypeCellProps,
   TypeGetColumnByParam,
+  CellProps,
 } from '../../types';
 
 import useProperty from '../useProperty';
@@ -127,7 +128,7 @@ const useUnselected = (
     rowSelectionEnabled: boolean;
     rowMultiSelectionEnabled: boolean;
   },
-  computedPropsRef: MutableRefObject<TypeComputedProps | null>
+  _computedPropsRef: MutableRefObject<TypeComputedProps | null>
 ): {
   unselected: TypeRowUnselected;
   setUnselected: Dispatch<SetStateAction<TypeRowUnselected>>;
@@ -137,9 +138,9 @@ const useUnselected = (
     'unselected'
   );
 
-  let [unselectedCount, setUnselectedCount] = useState<number>(
-    unselected ? Object.keys(unselected).length : 0
-  );
+  // let [unselectedCount, setUnselectedCount] = useState<number>(
+  //   unselected ? Object.keys(unselected).length : 0
+  // );
 
   if (!rowSelectionEnabled) {
     return {
@@ -163,7 +164,7 @@ const useUnselected = (
 
 const useSelected = (
   props: TypeSelectedProps,
-  computedProps: TypeComputedProps,
+  _computedProps: TypeComputedProps,
   computedPropsRef: MutableRefObject<TypeComputedProps | null>
 ): {
   selected: TypeRowSelection;
@@ -318,6 +319,15 @@ export default (
     col: TypeGetColumnByParam
   ) => string | number;
   setActiveCell: (activeCell: [number, number] | null) => void;
+  computedCellBulkUpdateMouseDown?: (
+    event: MouseEvent,
+    cellProps: CellProps
+  ) => void;
+  computedCellBulkUpdateMouseUp?: (
+    event: MouseEvent,
+    cellProps: CellProps
+  ) => void;
+  bulkUpdateMouseDown: boolean;
 } => {
   const {
     selected: computedSelected,
@@ -482,6 +492,9 @@ export default (
     cellDragStartRowIndex,
     setCellDragStartRowIndex,
     onCellSelectionDraggerMouseDown,
+    computedCellBulkUpdateMouseDown,
+    bulkUpdateMouseDown,
+    computedCellBulkUpdateMouseUp,
   } = computedProps.useCellSelection(
     props,
     {
@@ -508,14 +521,21 @@ export default (
 
     if (computedProps.computedGroupBy) {
       // need to filter out groups
+      // data = data.filter(d => {
+      //   const id = computedProps.getItemId(d);
+
+      //   if (!d.__group) {
+      //     dataMap![id] = id;
+      //     return true;
+      //   }
+      // });
+
+      // selection is implemented for groups too
       dataMap = {};
-      data = data.filter(d => {
+      data = data.map(d => {
         const id = computedProps.getItemId(d);
 
-        if (!d.__group) {
-          dataMap![id] = id;
-          return true;
-        }
+        dataMap![id] = id;
       });
     }
 
@@ -675,7 +695,7 @@ export default (
           }
         }
 
-        if (expandedNodes && expandedNodes[itemId]) {
+        if (expandedNodes && expandedNodes[idFromPath]) {
           if (Array.isArray(itemNodes)) {
             treeGridChildrenSelection(
               itemNodes,
@@ -685,6 +705,67 @@ export default (
               treeGridChildrenDeselectionEnabled,
               item
             );
+          }
+        }
+      }
+    }
+
+    return clone;
+  };
+
+  const groupChildrenSelection = ({
+    clone,
+    id,
+    selected,
+    dataMap,
+    idProperty,
+  }: {
+    clone: { [key: string]: any };
+    id: string;
+    dataMap: { [key: string]: any } | null;
+    idProperty: string;
+    selected?: boolean;
+  }) => {
+    if (!dataMap) {
+      return;
+    }
+
+    for (const key in dataMap) {
+      if (!key) {
+        break;
+      }
+
+      if (!key.includes(id)) {
+        continue;
+      }
+
+      const data = dataMap[key];
+
+      if (data.__group) {
+        if (selected) {
+          if (!clone[key]) {
+            clone[key] = data;
+          }
+        } else {
+          delete clone[key];
+        }
+        if (data.array && Array.isArray(data.array)) {
+          for (const item of data.array) {
+            const itemId = item[idProperty];
+            if (selected) {
+              if (!clone[itemId]) clone[itemId] = item;
+            } else {
+              delete clone[itemId];
+            }
+          }
+        }
+      } else {
+        const dataId = data[idProperty];
+        if (dataId === id) {
+          if (selected) {
+            if (!clone[id]) clone[id] = data;
+          } else {
+            delete clone[id];
           }
         }
       }
@@ -717,7 +798,7 @@ export default (
         let unselectedMap =
           selectedMap === true ? computedProps.computedUnselected || {} : null;
 
-        let clone: { [key: string]: any } = selectedMap as {
+        let clone: { [key: string]: any } | any = selectedMap as {
           [key: string]: any;
         };
 
@@ -763,6 +844,14 @@ export default (
               clone,
               treeGridChildrenDeselectionEnabled
             );
+          } else if (computedProps.groupColumn) {
+            groupChildrenSelection({
+              clone,
+              id,
+              selected,
+              dataMap: computedProps.dataMap,
+              idProperty: computedProps.idProperty,
+            });
           } else {
             if (selected) {
               clone[id] = data;
@@ -817,5 +906,8 @@ export default (
     getCellSelectionIdKey,
     setActiveCell,
     getCellSelectionKey,
+    computedCellBulkUpdateMouseDown,
+    computedCellBulkUpdateMouseUp,
+    bulkUpdateMouseDown,
   };
 };

@@ -4,7 +4,9 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import { useState, useCallback, useEffect, } from 'react';
+import { 
+// useState,
+useCallback, useEffect, } from 'react';
 import useProperty from '../useProperty';
 import isSelectionEnabled from './isSelectionEnabled';
 import isMultiSelect from './isMultiSelect';
@@ -59,9 +61,11 @@ const getSelectedCountFromProps = (computedProps, selected, unselected) => {
             ? 0
             : 1;
 };
-const useUnselected = (props, { rowSelectionEnabled, rowMultiSelectionEnabled, }, computedPropsRef) => {
+const useUnselected = (props, { rowSelectionEnabled, rowMultiSelectionEnabled, }, _computedPropsRef) => {
     let [unselected, setUnselected] = useProperty(props, 'unselected');
-    let [unselectedCount, setUnselectedCount] = useState(unselected ? Object.keys(unselected).length : 0);
+    // let [unselectedCount, setUnselectedCount] = useState<number>(
+    //   unselected ? Object.keys(unselected).length : 0
+    // );
     if (!rowSelectionEnabled) {
         return {
             unselected: null,
@@ -79,7 +83,7 @@ const useUnselected = (props, { rowSelectionEnabled, rowMultiSelectionEnabled, }
         setUnselected,
     };
 };
-const useSelected = (props, computedProps, computedPropsRef) => {
+const useSelected = (props, _computedProps, computedPropsRef) => {
     let [selected, setSelected] = useProperty(props, 'selected', undefined, {
         onChange: (selected, { silent, unselected, data, } = {}) => {
             const { current: computedProps } = computedPropsRef;
@@ -213,7 +217,7 @@ export default (props, computedProps, computedPropsRef) => {
     if (props.enableKeyboardNavigation === false) {
         computedHasRowNavigation = false;
     }
-    const { computedCellSelection, setCellSelection, cellSelectionEnabled: computedCellSelectionEnabled, cellMultiSelectionEnabled: computedCellMultiSelectionEnabled, cellNavigationEnabled: computedCellNavigationEnabled, computedActiveCell, incrementActiveCell, getCellSelectionIdKey, getCellSelectionBetween, toggleActiveCellSelection, onCellEnter, setActiveCell, getCellSelectionKey, cellDragStartRowIndex, setCellDragStartRowIndex, onCellSelectionDraggerMouseDown, } = computedProps.useCellSelection(props, {
+    const { computedCellSelection, setCellSelection, cellSelectionEnabled: computedCellSelectionEnabled, cellMultiSelectionEnabled: computedCellMultiSelectionEnabled, cellNavigationEnabled: computedCellNavigationEnabled, computedActiveCell, incrementActiveCell, getCellSelectionIdKey, getCellSelectionBetween, toggleActiveCellSelection, onCellEnter, setActiveCell, getCellSelectionKey, cellDragStartRowIndex, setCellDragStartRowIndex, onCellSelectionDraggerMouseDown, computedCellBulkUpdateMouseDown, bulkUpdateMouseDown, computedCellBulkUpdateMouseUp, } = computedProps.useCellSelection(props, {
         rowSelectionEnabled,
         listenOnCellEnter: computedProps.listenOnCellEnter,
         hasRowNavigation: computedHasRowNavigation,
@@ -230,13 +234,18 @@ export default (props, computedProps, computedPropsRef) => {
         let dataMap = computedProps.dataMap;
         if (computedProps.computedGroupBy) {
             // need to filter out groups
+            // data = data.filter(d => {
+            //   const id = computedProps.getItemId(d);
+            //   if (!d.__group) {
+            //     dataMap![id] = id;
+            //     return true;
+            //   }
+            // });
+            // selection is implemented for groups too
             dataMap = {};
-            data = data.filter(d => {
+            data = data.map(d => {
                 const id = computedProps.getItemId(d);
-                if (!d.__group) {
-                    dataMap[id] = id;
-                    return true;
-                }
+                dataMap[id] = id;
             });
         }
         if (computedProps.computedTreeEnabled && computedProps.stickyTreeNodes) {
@@ -345,9 +354,58 @@ export default (props, computedProps, computedPropsRef) => {
                         }
                     }
                 }
-                if (expandedNodes && expandedNodes[itemId]) {
+                if (expandedNodes && expandedNodes[idFromPath]) {
                     if (Array.isArray(itemNodes)) {
                         treeGridChildrenSelection(itemNodes, id, selected, clone, treeGridChildrenDeselectionEnabled, item);
+                    }
+                }
+            }
+        }
+        return clone;
+    };
+    const groupChildrenSelection = ({ clone, id, selected, dataMap, idProperty, }) => {
+        if (!dataMap) {
+            return;
+        }
+        for (const key in dataMap) {
+            if (!key) {
+                break;
+            }
+            if (!key.includes(id)) {
+                continue;
+            }
+            const data = dataMap[key];
+            if (data.__group) {
+                if (selected) {
+                    if (!clone[key]) {
+                        clone[key] = data;
+                    }
+                }
+                else {
+                    delete clone[key];
+                }
+                if (data.array && Array.isArray(data.array)) {
+                    for (const item of data.array) {
+                        const itemId = item[idProperty];
+                        if (selected) {
+                            if (!clone[itemId])
+                                clone[itemId] = item;
+                        }
+                        else {
+                            delete clone[itemId];
+                        }
+                    }
+                }
+            }
+            else {
+                const dataId = data[idProperty];
+                if (dataId === id) {
+                    if (selected) {
+                        if (!clone[id])
+                            clone[id] = data;
+                    }
+                    else {
+                        delete clone[id];
                     }
                 }
             }
@@ -402,6 +460,15 @@ export default (props, computedProps, computedPropsRef) => {
                     const treeGridChildrenDeselectionEnabled = computedProps.treeGridChildrenDeselectionEnabled;
                     treeGridChildrenSelection(cloneOriginalData, id, selected, clone, treeGridChildrenDeselectionEnabled);
                 }
+                else if (computedProps.groupColumn) {
+                    groupChildrenSelection({
+                        clone,
+                        id,
+                        selected,
+                        dataMap: computedProps.dataMap,
+                        idProperty: computedProps.idProperty,
+                    });
+                }
                 else {
                     if (selected) {
                         clone[id] = data;
@@ -454,5 +521,8 @@ export default (props, computedProps, computedPropsRef) => {
         getCellSelectionIdKey,
         setActiveCell,
         getCellSelectionKey,
+        computedCellBulkUpdateMouseDown,
+        computedCellBulkUpdateMouseUp,
+        bulkUpdateMouseDown,
     };
 };

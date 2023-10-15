@@ -80,6 +80,7 @@ export type TypeParam = {
   showPivotSummaryColumns?: boolean;
   onRowReorder?: TypeRowReorderFn | boolean;
   rowReorderColumn?: IColumn;
+  hasValueSetter?: boolean;
 };
 
 type TypeFilterValue = {
@@ -119,6 +120,7 @@ export default ({
   availableWidth = 0,
   onRowReorder,
   rowReorderColumn,
+  groupColumn: computedGroupColumn,
 }: TypeParam) => {
   if (columnVisibilityMap) {
     columnVisibilityMap = { ...columnVisibilityMap };
@@ -172,6 +174,7 @@ export default ({
 
   let hasLockedStart = false;
   let hasLockedEnd = false;
+  let hasValueSetter = false;
 
   let rowExpandColumn: TypeComputedColumn | undefined;
 
@@ -251,6 +254,10 @@ export default ({
       if (col.enableColumnHover != null) {
         col.computedEnableColumnHover = col.enableColumnHover;
         delete col.enableColumnHover;
+      }
+
+      if (col.setValue) {
+        hasValueSetter = true;
       }
 
       return col;
@@ -423,16 +430,24 @@ export default ({
       ...columnOrder.filter(id => !generatedColumnIds[id]),
     ];
   }
+
   if (columnOrder) {
     const groupSpacerColumns = visibleColumns.filter(
       col => col.groupSpacerColumn
     );
+    const checkboxColumn = visibleColumns.filter(col => col.checkboxColumn);
     const groupColumns = visibleColumns.filter(
       col => col.groupColumn && !col.groupSpacerColumn
     );
-    const ungroupColumns = visibleColumns.filter(
-      col => !col.groupColumn && !col.groupSpacerColumn
-    );
+    const ungroupColumns = visibleColumns.filter(col => {
+      if (computedGroupColumn) {
+        return (
+          !col.groupColumn && !col.groupSpacerColumn && !col.checkboxColumn
+        );
+      } else {
+        return !col.groupColumn && !col.groupSpacerColumn;
+      }
+    });
 
     visibleColumns = columnOrder
       .map((colId: string) => {
@@ -440,11 +455,20 @@ export default ({
       })
       .filter((x: any) => !!x) as TypeComputedColumn[];
 
-    visibleColumns = [
-      ...groupSpacerColumns,
-      ...groupColumns,
-      ...visibleColumns,
-    ];
+    if (computedGroupColumn) {
+      visibleColumns = [
+        ...checkboxColumn,
+        ...groupSpacerColumns,
+        ...groupColumns,
+        ...visibleColumns,
+      ];
+    } else {
+      visibleColumns = [
+        ...groupSpacerColumns,
+        ...groupColumns,
+        ...visibleColumns,
+      ];
+    }
   }
 
   if (typeof filter == 'function') {
@@ -654,6 +678,7 @@ export default ({
     allColumns: normalizedColumns as TypeComputedColumn[],
     columnsMap,
     visibleColumnsMap,
+    hasValueSetter,
   };
 };
 

@@ -81,7 +81,7 @@ const useActiveCell = (
 
         if (
           !data ||
-          data.__group ||
+          (data as any).__group ||
           activeCellRowIndex == null ||
           activeCellColumnIndex == null
         ) {
@@ -129,6 +129,7 @@ const useActiveCell = (
     if (!computedProps) {
       return;
     }
+
     if (oldActiveCell !== computedActiveCell && computedActiveCell) {
       const [rowIndex, columnIndex] = computedActiveCell;
       if (rowIndex == null || columnIndex == null) {

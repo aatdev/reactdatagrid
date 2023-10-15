@@ -12,6 +12,7 @@ import {
   MutableRefObject,
   ReactPortal,
   CSSProperties,
+  RefObject,
 } from 'react';
 
 import { TypeSortInfo } from './TypeSortInfo';
@@ -61,6 +62,7 @@ import {
   TypeExpandedGroups,
   TypeGroupTool,
   CellProps,
+  RowProps,
 } from '.';
 import {
   TypeRowSelection,
@@ -97,6 +99,7 @@ export type TypeOnSelectionChangeArg = {
   selected: TypeRowSelection;
   data?: object;
   unselected?: TypeRowSelection;
+  originalData?: TypeDataSource;
 };
 export type TypeRowDetailsInfo = {
   id: string | number;
@@ -155,8 +158,12 @@ export type EnumRowDetailsWidth =
 type TypeGridPublicAPI = any;
 
 type TypeDataGridPropsNoI18n = {
+  copySpreadsheetCompatibleString?: boolean;
+  enableClipboardForEditableCellsOnly?: boolean;
   activeCellThrottle?: number;
   activeIndexThrottle?: number;
+  allowRowTabNavigation?: boolean;
+  rowFocusClassName?: string;
   scrollThreshold?: number | string;
   rowContextMenuAlignPositions?: string[];
   rowContextMenuPosition?: 'fixed' | 'absolute';
@@ -488,6 +495,7 @@ type TypeDataGridPropsNoI18n = {
   onActiveIndexChange?: (index: number) => void;
   onKeyDown?: (event: KeyboardEvent) => void;
   onRowClick?: (rowProps: TypeRowProps, event: MouseEvent) => void;
+  onRowDoubleClick?: (event: MouseEvent, rowProps: TypeRowProps) => void;
   onFocus?: (event: FocusEvent) => void;
   onBlur?: (event: FocusEvent) => void;
   selected?: TypeRowSelection;
@@ -507,7 +515,7 @@ type TypeDataGridPropsNoI18n = {
   columnResizeHandleWidth: number;
   rowResizeHandleWidth?: number;
   columnResizeProxyWidth: number;
-  rowHeight: number | ((rowIndex: number) => number);
+  rowHeight: number | ((rowIndex: number) => number) | null;
   minRowHeight?: number;
   maxRowHeight?: number;
   checkboxColumn?: IColumn | boolean;
@@ -737,6 +745,7 @@ type TypeDataGridPropsNoI18n = {
   pageSizes?: number[];
   onCellClick?: (event: MouseEvent, cellProps: TypeCellProps) => void;
   onRefresh?: () => void
+  onCellDoubleClick?: (event: MouseEvent, cellProps: TypeCellProps) => void;
   enableTreeRowReorder?: boolean;
   enableTreeRowReorderNestingChange?: boolean;
   enableTreeRowReorderParentChange?: boolean;
@@ -777,7 +786,31 @@ type TypeDataGridPropsNoI18n = {
   onRowContextMenu?: (rowProps: TypeRowProps, event: any) => void;
   hideRowFilterContextMenu?: () => void;
   renderGridMenu?: (result: any, computedProps: TypeComputedProps) => void;
+  stickyHeader?: boolean;
+  disabledRows?: { [key: string]: boolean } | null;
+  clipboardSeparator?: string;
+  enableColumnFilterContextMenu?: boolean;
+  rowReorderAutoScroll?: boolean;
+  rowReorderArrowStyle?: CSSProperties;
+  rowReorderAutoScrollSpeed?: number;
+  compoundIdProperty?: boolean;
+  renderTreeCollapseTool?: ({
+    domProps,
+    size,
+  }: {
+    domProps: any;
+    size?: number;
+  }) => void;
+  renderTreeExpandTool?: ({
+    domProps,
+    size,
+  }: {
+    domProps: any;
+    size?: number;
+  }) => void;
+  hasValueSetter?: boolean;
 };
+
 type TypeDataGridComputedClashingProps = {
   i18n?: TypeI18n;
 };
@@ -791,18 +824,21 @@ export type TypePivotUniqueValuesDescriptor = {
 };
 export type TypeComputedProps = TypeDataGridPropsNoI18n & {
   ColumnLayout?: any;
-  disabledRows?: { [key: string]: boolean } | null;
-  copySpreadsheetCompatibleString?: boolean;
-  clipboardSeparator?: string;
-  enableColumnFilterContextMenu?: boolean;
+  enableCellBulkUpdate?: boolean;
+  getDOMNodeForRowIndex: (index: number) => ReactNode | null;
+  computedCellDoubleClick?: (
+    event: MouseEvent,
+    cellProps: TypeCellProps
+  ) => void;
+  editedTreeData?: (editProps: TypeEditInfo) => any[] | null;
+  computedRowDoubleClick?: (event: MouseEvent, rowProps: TypeRowProps) => void;
+
   filteredRowsCount?: (filteredRows: number) => number;
   dataCountAfterFilter?: number;
   computedLastActiveIndex: number | null;
   doSetLastActiveIndex: (lastActiveIndex: number | null) => void;
   columnContextMenuInstanceProps?: any;
-  rowReorderAutoScroll?: boolean;
-  rowReorderArrowStyle?: CSSProperties;
-  rowReorderAutoScrollSpeed?: number;
+
   notifyColumnFilterVisibleStateChange: FunctionNotifier<boolean>;
   computedPivotUniqueValuesPerColumn: TypePivotUniqueValuesDescriptor;
   computedLicenseValid?: boolean;
@@ -835,9 +871,8 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
 
   data: any[];
   originalData: any[];
-  skip?: number;
+
   computedSkip: number;
-  limit?: number;
   computedLimit: number;
   setSkip?: (skip: number) => void;
   setLimit?: (limit: number) => void;
@@ -1346,6 +1381,11 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
     property: string,
     value: any
   ) => void;
+  setItemOnReorderingGroups: (
+    index: number,
+    item: { [key: string]: any },
+    config?: { replace?: boolean }
+  ) => void;
   setItemAt: (
     index: number,
     item: any,
@@ -1460,7 +1500,6 @@ export type TypeComputedProps = TypeDataGridPropsNoI18n & {
     rowIndex?: number;
     columnId?: string;
   }) => void;
-  compoundIdProperty?: boolean;
 };
 
 export default TypeDataGridProps;

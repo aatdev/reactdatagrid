@@ -350,8 +350,12 @@ const GridFactory = (
         setSize(size);
         updateViewportAvailableWidth(size.width);
 
-        if (props.rowHeight) {
-          setMaxVisibleRows(Math.ceil(size.height / props.rowHeight));
+        const rowHeight: number | undefined =
+          typeof props.rowHeight !== 'number'
+            ? props.minRowHeight
+            : props.rowHeight;
+        if (rowHeight) {
+          setMaxVisibleRows(Math.ceil(size.height / rowHeight));
         }
       });
     };
@@ -653,6 +657,7 @@ const GridFactory = (
 
       return -1;
     };
+
     const getItemAt = (index: number) => {
       if (!computedPropsRef.current) {
         return undefined;
@@ -664,6 +669,7 @@ const GridFactory = (
 
       return getItemWithCache(item);
     };
+
     const getItemWithCache = (item: any) => {
       if (
         item &&
@@ -810,6 +816,18 @@ const GridFactory = (
       return vl.getRows();
     };
 
+    const getDOMNodeForRowIndex = (index: number): ReactNode | null => {
+      const rows = getRows();
+      const row = rows.find((row: any) => row.index === index);
+      const rowInstance = row.getInstance();
+
+      return rowInstance.getDOMNode
+        ? rowInstance.getDOMNode()
+        : rowInstance.domRef
+        ? rowInstance.domRef.current
+        : null;
+    };
+
     const getHeader = () => {
       const body = bodyRef.current;
       const columnLayout = body && body.getColumnLayout();
@@ -900,8 +918,12 @@ const GridFactory = (
       const col = computedProps.visibleColumns[columnIndex];
 
       const scrollToRow = () => {
+        const maxIndex = computedProps.computedTreeEnabled
+          ? computedProps.data.length - 1
+          : computedProps.count - 1;
+
         computedProps.scrollToIndex(
-          clamp(rowIndex + (top ? -0 : 0), 0, computedProps.count - 1),
+          clamp(rowIndex + (top ? -0 : 0), 0, maxIndex),
           { top, offset: 0 }
         );
       };
@@ -1223,6 +1245,7 @@ const GridFactory = (
       getItemIdAt,
       getRows,
       focus,
+      getDOMNodeForRowIndex,
       blur,
       computedShowHeaderBorderRight:
         columnInfo.totalComputedWidth < viewportAvailableWidth ||
@@ -1699,6 +1722,8 @@ const GridFactory = (
       domProps.tabIndex = 0;
     },
 
+    stickyHeader: false,
+    enableCellBulkUpdate: false,
     enableKeyboardNavigation: true,
     scrollTopOnFilter: true,
     scrollTopOnSort: true,
@@ -1708,6 +1733,7 @@ const GridFactory = (
     defaultShowHoverRows: true,
     defaultShowZebraRows: true,
     defaultShowCellBorders: true,
+    allowRowTabNavigation: false,
 
     cellSelectionByIndex: false,
 

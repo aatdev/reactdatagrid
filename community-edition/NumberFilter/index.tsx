@@ -28,6 +28,7 @@ type NumberFilterProps = {
   i18n?: (key?: string, defaultLabel?: string) => void;
   filterEditorProps?: any;
   render?: Function;
+  inputRef?: any;
 };
 
 type NumberFilterState = {
@@ -53,6 +54,14 @@ class NumberFilter extends React.Component<
     super(props);
 
     this.refInput = (i: any) => {
+      const inputRef = props.inputRef || props.filterEditorProps?.inputRef;
+      if (inputRef) {
+        if (typeof inputRef === 'function') {
+          inputRef(i);
+        } else {
+          inputRef.current = i;
+        }
+      }
       this.input = i;
     };
 
@@ -76,17 +85,16 @@ class NumberFilter extends React.Component<
 
   componentDidUpdate = ({ filterValue: { value } }: any) => {
     if (this.props.filterValue) {
-      if (
-        (value < this.props.filterValue &&
-          (this.props.filterValue as any).value) ||
-        (value > this.props.filterValue &&
-          (this.props.filterValue as any).value)
-      ) {
+      if (value !== this.props.filterValue?.value) {
         // When we change operators from unary to binary and vice versa
         // we have to reset the value, and i pass this new value to NumberFilter state
-        this.setValue(this.props.filterValue && this.props.filterValue.value);
+        this.setValue(this.props.filterValue?.value);
       }
     }
+  };
+
+  getInputRef = () => {
+    return this.input;
   };
 
   onChange(value: string | number) {
@@ -221,6 +229,12 @@ class NumberFilter extends React.Component<
             'InovuaReactDataGrid__column-header__filter InovuaReactDataGrid__column-header__filter--number',
           ...inputProps,
         };
+
+        let finalPropsValue = finalProps.value;
+        if (typeof finalProps.value === 'object') {
+          finalPropsValue = null;
+        }
+        finalProps.value = finalPropsValue;
 
         return (
           this.props.render &&

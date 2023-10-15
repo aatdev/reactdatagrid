@@ -5,7 +5,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import React, { Component, CSSProperties, ReactElement } from 'react';
+import React, {
+  createRef,
+  Component,
+  CSSProperties,
+  ReactElement,
+} from 'react';
 
 import { DateInput } from '../packages/Calendar';
 
@@ -22,6 +27,11 @@ type TypeValue = {
   end?: any;
 };
 
+type TypeText = {
+  start?: string;
+  end?: string;
+};
+
 type DateFilterProps = {
   filterValue?: TypeFilterValue;
   onChange?: Function;
@@ -36,10 +46,12 @@ type DateFilterProps = {
   filterEditorProps?: any;
   cellProps?: any;
   render?: any;
+  inputRef?: any;
 };
 
 type DateFilterState = {
   value?: any;
+  text?: any;
 };
 
 type InputProps = {
@@ -56,23 +68,31 @@ type InputProps = {
   style?: CSSProperties;
   theme?: string;
   rtl?: boolean;
-  text?: string;
+  text?: string | TypeText;
+  onTextChange?: (value: string) => void;
+  ref?: any;
 };
 
 class DateFilter extends Component<DateFilterProps, DateFilterState> {
+  private input: any;
+
   constructor(props: DateFilterProps) {
     super(props);
 
     const { filterValue } = props;
 
+    this.input = createRef();
+
     this.state = {
       value: filterValue ? filterValue.value || '' : '',
+      text: '',
     };
 
     this.onChange = this.onChange.bind(this);
     this.onStartChange = this.onStartChange.bind(this);
     this.onEndChange = this.onEndChange.bind(this);
     this.onValueChange = this.onValueChange.bind(this);
+    this.onTextChange = this.onTextChange.bind(this);
   }
 
   componentDidUpdate(prevProps: any) {
@@ -85,6 +105,10 @@ class DateFilter extends Component<DateFilterProps, DateFilterState> {
       this.setValue(this.props.filterValue.value);
     }
   }
+
+  getInputRef = () => {
+    return this.input.current;
+  };
 
   onChange(value: TypeValue) {
     if (value === this.state.value) {
@@ -119,10 +143,13 @@ class DateFilter extends Component<DateFilterProps, DateFilterState> {
     this.setValue(newValue);
   }
 
-  setValue(value: TypeValue) {
+  setValue(value: string | TypeValue) {
     this.setState({
       value,
     });
+    if (typeof value === 'string') {
+      this.onTextChange(value);
+    }
   }
 
   onValueChange(value: TypeValue) {
@@ -132,6 +159,32 @@ class DateFilter extends Component<DateFilterProps, DateFilterState> {
         value,
       });
   }
+
+  onTextChange(value: string) {
+    this.setState({ text: value });
+  }
+
+  onStartTextChange = (start: string) => {
+    const { text } = this.state;
+
+    if (text && text.start && start === text.start) {
+      return;
+    }
+    const newText = typeof text === 'string' ? {} : { ...text };
+    newText.start = start;
+    this.setState({ text: newText });
+  };
+
+  onEndTextChange = (end: string) => {
+    const { text } = this.state;
+
+    if (text && text.end && end === text.end) {
+      return;
+    }
+    const newText = typeof text === 'string' ? {} : { ...text };
+    newText.end = end;
+    this.setState({ text: newText });
+  };
 
   render() {
     const {
@@ -182,6 +235,7 @@ class DateFilter extends Component<DateFilterProps, DateFilterState> {
       (cell && cell.getDOMNode());
 
     const inputProps: InputProps = {
+      ref: this.input,
       calendarProps: { ...calendarLabels },
       readOnly,
       disabled,
@@ -218,11 +272,14 @@ class DateFilter extends Component<DateFilterProps, DateFilterState> {
     switch (filterValue && filterValue.operator) {
       case 'inrange':
       case 'notinrange':
-        const { start, end } = this.state.value,
-          startInputProps = { ...inputProps, value: start },
+        const { value, text } = this.state;
+        const { start, end } = value;
+        const { start: startText, end: endText } = text,
+          startInputProps = { ...inputProps, value: start, text: startText },
           endInputProps = {
             ...inputProps,
             value: end,
+            text: endText,
             overlayProps: {
               target: () => {
                 const filterNodes: any =
@@ -258,6 +315,7 @@ class DateFilter extends Component<DateFilterProps, DateFilterState> {
           placeholder: i18n && i18n('start'),
           ...startFilterEditorProps,
           onChange: this.onStartChange,
+          onTextChange: this.onStartTextChange,
           className: editorClassName,
           ...startInputProps,
           renderPicker,
@@ -269,9 +327,11 @@ class DateFilter extends Component<DateFilterProps, DateFilterState> {
           placeholder: i18n && i18n('end'),
           ...endFilterEditorProps,
           onChange: this.onEndChange,
+          onTextChange: this.onEndTextChange,
           className: editorClassName,
           ...endInputProps,
           renderPicker,
+          endInput: true,
         };
 
         const endEditor = <DateInput {...endProps} />;
@@ -291,9 +351,14 @@ class DateFilter extends Component<DateFilterProps, DateFilterState> {
               })
             : filterEditorProps;
 
+        if (finalEditorProps?.inputRef) {
+          finalEditorProps.inputRef.current = this.getInputRef();
+        }
+
         const finalProps = {
           ...finalEditorProps,
           onChange: this.onChange,
+          onTextChange: this.onTextChange,
           className: editorClassName,
           ...inputProps,
           renderPicker,

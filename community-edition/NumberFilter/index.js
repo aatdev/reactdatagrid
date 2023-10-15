@@ -13,6 +13,15 @@ class NumberFilter extends React.Component {
     constructor(props) {
         super(props);
         this.refInput = (i) => {
+            const inputRef = props.inputRef || props.filterEditorProps?.inputRef;
+            if (inputRef) {
+                if (typeof inputRef === 'function') {
+                    inputRef(i);
+                }
+                else {
+                    inputRef.current = i;
+                }
+            }
             this.input = i;
         };
         this.state = {
@@ -32,15 +41,15 @@ class NumberFilter extends React.Component {
     }
     componentDidUpdate = ({ filterValue: { value } }) => {
         if (this.props.filterValue) {
-            if ((value < this.props.filterValue &&
-                this.props.filterValue.value) ||
-                (value > this.props.filterValue &&
-                    this.props.filterValue.value)) {
+            if (value !== this.props.filterValue?.value) {
                 // When we change operators from unary to binary and vice versa
                 // we have to reset the value, and i pass this new value to NumberFilter state
-                this.setValue(this.props.filterValue && this.props.filterValue.value);
+                this.setValue(this.props.filterValue?.value);
             }
         }
+    };
+    getInputRef = () => {
+        return this.input;
     };
     onChange(value) {
         if (value === this.state.value) {
@@ -146,6 +155,11 @@ class NumberFilter extends React.Component {
                     className: 'InovuaReactDataGrid__column-header__filter InovuaReactDataGrid__column-header__filter--number',
                     ...inputProps,
                 };
+                let finalPropsValue = finalProps.value;
+                if (typeof finalProps.value === 'object') {
+                    finalPropsValue = null;
+                }
+                finalProps.value = finalPropsValue;
                 return (this.props.render &&
                     this.props.render(React.createElement(NumericInput, { ...finalProps })));
         }

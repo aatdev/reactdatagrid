@@ -123,6 +123,9 @@ export interface IColumn {
   readonly editor?: ReactNode;
   readonly renderHeader?: (cellProps: CellProps) => string | ReactNode;
   renderCheckbox?: (...args: any[]) => any;
+  shouldComponentUpdate?: () => boolean;
+  readonly className?: string;
+  setValue?: (props: any) => void;
 }
 
 export interface TypeColWithNameProperty extends IColumn {

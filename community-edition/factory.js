@@ -222,8 +222,11 @@ const GridFactory = ({ plugins } = {}, edition = 'community') => {
                 }
                 setSize(size);
                 updateViewportAvailableWidth(size.width);
-                if (props.rowHeight) {
-                    setMaxVisibleRows(Math.ceil(size.height / props.rowHeight));
+                const rowHeight = typeof props.rowHeight !== 'number'
+                    ? props.minRowHeight
+                    : props.rowHeight;
+                if (rowHeight) {
+                    setMaxVisibleRows(Math.ceil(size.height / rowHeight));
                 }
             });
         };
@@ -540,6 +543,16 @@ const GridFactory = ({ plugins } = {}, edition = 'community') => {
             const vl = getVirtualList();
             return vl.getRows();
         };
+        const getDOMNodeForRowIndex = (index) => {
+            const rows = getRows();
+            const row = rows.find((row) => row.index === index);
+            const rowInstance = row.getInstance();
+            return rowInstance.getDOMNode
+                ? rowInstance.getDOMNode()
+                : rowInstance.domRef
+                    ? rowInstance.domRef.current
+                    : null;
+        };
         const getHeader = () => {
             const body = bodyRef.current;
             const columnLayout = body && body.getColumnLayout();
@@ -587,7 +600,10 @@ const GridFactory = ({ plugins } = {}, edition = 'community') => {
                     : undefined;
             const col = computedProps.visibleColumns[columnIndex];
             const scrollToRow = () => {
-                computedProps.scrollToIndex(clamp(rowIndex + (top ? -0 : 0), 0, computedProps.count - 1), { top, offset: 0 });
+                const maxIndex = computedProps.computedTreeEnabled
+                    ? computedProps.data.length - 1
+                    : computedProps.count - 1;
+                computedProps.scrollToIndex(clamp(rowIndex + (top ? -0 : 0), 0, maxIndex), { top, offset: 0 });
             };
             if (!col) {
                 return;
@@ -826,6 +842,7 @@ const GridFactory = ({ plugins } = {}, edition = 'community') => {
             getItemIdAt,
             getRows,
             focus,
+            getDOMNodeForRowIndex,
             blur,
             computedShowHeaderBorderRight: columnInfo.totalComputedWidth < viewportAvailableWidth ||
                 (props.nativeScroll && getScrollbarWidth() && scrollbars.vertical),
@@ -1120,6 +1137,8 @@ const GridFactory = ({ plugins } = {}, edition = 'community') => {
         renderScroller: domProps => {
             domProps.tabIndex = 0;
         },
+        stickyHeader: false,
+        enableCellBulkUpdate: false,
         enableKeyboardNavigation: true,
         scrollTopOnFilter: true,
         scrollTopOnSort: true,
@@ -1129,6 +1148,7 @@ const GridFactory = ({ plugins } = {}, edition = 'community') => {
         defaultShowHoverRows: true,
         defaultShowZebraRows: true,
         defaultShowCellBorders: true,
+        allowRowTabNavigation: false,
         cellSelectionByIndex: false,
         columnResizeHandleWidth: isMobile ? 15 : 5,
         columnResizeProxyWidth: 5,

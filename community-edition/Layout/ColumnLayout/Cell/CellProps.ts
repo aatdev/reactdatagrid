@@ -12,6 +12,8 @@ import { TypeGroupTool } from '../../../types';
 type func = (...args: any[]) => any;
 export type CellProps = {
   timestamp: number;
+  dataSourceChange?: boolean;
+  columnsChange?: boolean;
   onTransitionEnd?: (e: any) => void;
   inEdit?: boolean;
   cellRef?: any;
@@ -123,7 +125,13 @@ export type CellProps = {
   onCellEnter?: func;
   onCellMouseDown?: func;
   preventSortOnClick?: func;
-  onCellSelectionDraggerMouseDown?: func;
+  onCellSelectionDraggerMouseDown?: (
+    event: MouseEvent,
+    cellProps: CellProps
+  ) => void;
+  onCellBulkUpdateMouseDown?: (event: MouseEvent, cellProps: CellProps) => void;
+  onCellBulkUpdateMouseUp?: (event: MouseEvent, cellProps: CellProps) => void;
+  bulkUpdateMouseDown?: boolean;
   onGroupToggle?: func;
   onMount?: func;
   onRender?: func;
@@ -257,7 +265,7 @@ export type CellProps = {
   onColumnMouseEnter?: (props: CellProps) => void;
   onColumnMouseLeave?: (props: CellProps) => void;
   showColumnFilterContextMenu?: (node: ReactNode, props: CellProps) => void;
-  hideColumnFilterContextMenu?: () => void;
+  hideColumnFilterContextMenu?: (node?: ReactNode) => void;
   onDoubleClick?: (event: MouseEvent, props: CellProps) => void;
   onFocus?: (event: MouseEvent, props: CellProps) => void;
   editor?: any;
@@ -446,7 +454,7 @@ export type CellInstance = {
     cellProps: EnhancedCellProps
   ) => void | JSX.Element | null;
   showFilterContextMenu: (node: ReactNode) => void;
-  hideFilterContextMenu: () => void;
+  hideFilterContextMenu: (node: ReactNode) => void;
   getProxyRegion: () => void;
   renderGroupTool: () => void;
   toggleGroup: (event: any) => void;
